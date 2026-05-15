@@ -1,0 +1,256 @@
+:root {
+  --kintsugi-gold: #D4AF37;
+  --kintsugi-gold-light: #F9E076;
+  --kintsugi-gold-glow: rgba(212, 175, 55, 0.4);
+  --stone-dark: #1a1a1a;
+  --text-color: #eee;
+}
+
+body.light {
+  --stone-dark: #FAF9F6; /* Fildişi/Parşömen */
+  --text-color: #2c2c2c;
+  --kintsugi-gold: #B8860B; /* Koyu Altın */
+}
+
+/* Kademeli Renkler */
+.stage-0 { --crack-color: #444; --glow-intensity: 0px; --frame-color: rgba(255, 255, 255, 0.03); }
+.stage-1 { --crack-color: #8B4513; --glow-intensity: 2px; --frame-color: rgba(139, 69, 19, 0.3); } /* Bakır */
+.stage-2 { --crack-color: #CD7F32; --glow-intensity: 4px; --frame-color: rgba(205, 127, 50, 0.4); } /* Bronz */
+.stage-3 { --crack-color: #DAA520; --glow-intensity: 8px; --frame-color: rgba(218, 165, 32, 0.6); } /* Altın sarısı */
+.stage-4 { --crack-color: #FFD700; --glow-intensity: 12px; --frame-color: rgba(255, 215, 0, 0.8); } /* Parlak Altın */
+.stage-5 { --crack-color: #FFF700; --glow-intensity: 20px; --frame-color: rgba(255, 247, 0, 1); } /* Radyant Altın */
+
+.kintsugi-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.kintsugi-card {
+  position: relative;
+  background: var(--stone-dark);
+  border-radius: 20px;
+  padding: 2.5rem;
+  overflow: hidden;
+  border: 1px solid var(--frame-color, rgba(255, 255, 255, 0.03));
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), 0 0 calc(var(--glow-intensity) * 1.5) var(--crack-color);
+}
+
+/* Işıltı Efekti */
+.kintsugi-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  box-shadow: inset 0 0 var(--glow-intensity) var(--kintsugi-gold-glow);
+  pointer-events: none;
+  border-radius: 20px;
+  transition: box-shadow 0.8s ease;
+}
+
+.crack-svg {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.crack-path {
+  fill: none;
+  stroke: var(--crack-color);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: drop-shadow(0 0 calc(var(--glow-intensity) / 3) var(--crack-color));
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: drawPath 3s ease-out forwards;
+}
+
+@keyframes drawPath {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.fully-repaired {
+  border-color: var(--kintsugi-gold) !important;
+  box-shadow: 0 0 40px var(--kintsugi-gold-glow) !important;
+}
+
+.fully-repaired::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(212,175,55,0.1) 0%, transparent 70%);
+  animation: rotateGlow 10s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes rotateGlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.kintsugi-content {
+  position: relative;
+  z-index: 1;
+}
+
+.kintsugi-author {
+  font-size: 0.7rem;
+  color: #555;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-weight: 800;
+}
+
+.kintsugi-text {
+  font-size: 1.3rem;
+  line-height: 1.7;
+  color: var(--text-color);
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+}
+
+.kintsugi-actions {
+  margin-top: 2.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 2;
+}
+
+.support-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #888;
+  padding: 0.6rem 1.8rem;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.4s ease;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.support-btn:hover {
+  border-color: var(--kintsugi-gold);
+  color: var(--kintsugi-gold);
+  background: rgba(212, 175, 55, 0.08);
+  transform: translateY(-2px);
+}
+
+.support-btn.completed {
+  background: linear-gradient(45deg, #D4AF37, #F9E076);
+  color: #000;
+  border: none;
+  box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
+}
+
+.author-badge {
+  font-size: 0.75rem;
+  color: var(--kintsugi-gold);
+  background: rgba(212, 175, 55, 0.1);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+/* Reddit Style Comments */
+.comment-thread {
+  margin-left: 10px;
+  border-left: 2px solid rgba(212, 175, 55, 0.1);
+  padding-left: 14px;
+  margin-top: 10px;
+  transition: border-color 0.3s ease;
+}
+
+.comment-thread:hover {
+  border-left-color: rgba(212, 175, 55, 0.3);
+}
+
+.comment-item {
+  position: relative;
+  margin-bottom: 12px;
+  padding: 4px 0;
+}
+
+.comment-main {
+  display: flex;
+  gap: 12px;
+}
+
+.vote-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.vote-btn {
+  padding: 0 !important;
+  min-width: auto !important;
+  color: #555 !important;
+}
+
+.vote-btn:hover.up { color: #ff4500 !important; }
+.vote-btn:hover.down { color: #7193ff !important; }
+
+.comment-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.comment-author {
+  font-size: 0.8rem !important;
+  font-weight: 700 !important;
+  color: #fff !important;
+  opacity: 0.9;
+}
+
+.comment-time {
+  font-size: 0.7rem !important;
+  color: #555 !important;
+}
+
+.comment-body {
+  font-size: 0.95rem !important;
+  color: #ccc !important;
+  line-height: 1.4;
+}
+
+.comment-score {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #888;
+}
+
+.comment-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.comment-action-btn {
+  font-size: 0.75rem !important;
+  color: #666 !important;
+  text-transform: none !important;
+  padding: 2px 4px !important;
+  min-width: auto !important;
+}
+
+.comment-action-btn:hover {
+  background: rgba(255,255,255,0.05) !important;
+  color: #D4AF37 !important;
+}
