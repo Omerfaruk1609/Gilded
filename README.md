@@ -88,22 +88,40 @@ Gilded/
 
 ---
 
-## 🚀 Kurulum ve Çalıştırma
+## 🚀 Kurulum ve Sıfırdan Çalıştırma
 
-1. **Bağımlılıkları Yükle:**
-   ```bash
-   npm install
-   ```
+Projeyi yerel makinenizde sıfırdan çalıştırmak için aşağıdaki adımları izleyin:
 
-2. **Geliştirme Modunda Başlat:**
-   ```bash
-   # Hem frontend hem backend'i eşzamanlı çalıştırır
-   npm run dev
-   ```
+### 1. Bağımlılıkları Yükle
+Terminali açın ve proje kök dizininde şu komutu çalıştırın:
+```bash
+npm install
+```
 
-3. **Admin Bilgileri:**
-   - **E-posta:** `admin@gold.com` (Veya veritabanındaki admin hesabı)
-   - **Şifre:** `123456`
+### 2. Uygulamayı Başlat
+Hem **Frontend (Vite)** hem de **Backend (Express)** sunucusunu tek bir komutla başlatabilirsiniz:
+```bash
+npm run dev
+npm run server
+```
+*Bu komut otomatik olarak hem istemciyi hem de sunucuyu çalıştıracaktır.*
+
+### 3. Bağlantı ve Port Bilgileri
+- **Frontend:** [http://localhost:5173](http://localhost:5173)
+- **Backend (API):** [http://localhost:5000](http://localhost:5000)
+- **Veritabanı:** SQLite (Dosya: `server/database.sqlite`)
+
+### 4. Admin Bilgileri
+Yönetici paneline erişmek için aşağıdaki bilgileri kullanabilirsiniz:
+- **E-posta:** `admin@gold.com`
+- **Şifre:** `123456`
+
+---
+
+## 🛠️ Teknik Detaylar
+- **Frontend Proxy:** Frontend'den yapılan API istekleri `http://localhost:5000` adresine yönlendirilir.
+- **Socket.io:** Bildirimler için `5000` portu üzerinden gerçek zamanlı bağlantı kurulur.
+- **Yüklemeler:** Profil ve post görselleri `server/uploads` klasöründe saklanır.
 
 ---
 

@@ -106,4 +106,26 @@ db.exec(`
   )
 `);
 
+const bcrypt = require('bcryptjs');
+
+// Admin hesabı kontrolü ve oluşturma
+const adminEmail = 'admin@gold.com';
+const adminPassword = '123456';
+const adminAd = 'Admin';
+
+const existingAdmin = db.prepare('SELECT * FROM users WHERE email = ?').get(adminEmail);
+
+if (!existingAdmin) {
+  const hashedPassword = bcrypt.hashSync(adminPassword, 10);
+  db.prepare('INSERT INTO users (email, password, ad, role) VALUES (?, ?, ?, ?)')
+    .run(adminEmail, hashedPassword, adminAd, 'ADMIN');
+  console.log('✅ Admin hesabı oluşturuldu: admin@gold.com');
+} else {
+  // Eğer kullanıcı varsa ama rolü admin değilse güncelle
+  if (existingAdmin.role !== 'ADMIN') {
+    db.prepare('UPDATE users SET role = ? WHERE email = ?').run('ADMIN', adminEmail);
+    console.log('⬆️ Mevcut hesap ADMIN rolüne yükseltildi: admin@gold.com');
+  }
+}
+
 module.exports = db;
