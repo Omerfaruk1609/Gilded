@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Box, Typography, Button, CircularProgress } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import KintsugiCard from '../components/kintsugi/KintsugiCard';
+import { API_URL } from '../services/apiConfig';
 
 const PostDetailPage = () => {
   const { id } = useParams();
@@ -16,7 +17,7 @@ const PostDetailPage = () => {
   useEffect(() => {
     const fetchPost = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/posts/${id}?userId=${currentUser.email}`);
+        const response = await fetch(`${API_URL}/posts/${id}?userId=${currentUser.email}`);
         if (!response.ok) {
           throw new Error('Post bulunamadı');
         }
@@ -60,9 +61,11 @@ const PostDetailPage = () => {
           id={post.id}
           content={post.content}
           image_url={post.image_url}
+          mood={post.mood}
           post_type={post.post_type}
           author_id={post.author_id}
           author_name={post.author_name}
+          author_role={post.author_role}
           is_anonymous={post.is_anonymous}
           initialSupport={post.support_count}
           initialHasSupported={post.has_supported}

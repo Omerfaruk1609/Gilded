@@ -107,6 +107,7 @@ npm run server
 *Bu komut otomatik olarak hem istemciyi hem de sunucuyu çalıştıracaktır.*
 
 ### 3. Bağlantı ve Port Bilgileri
+Proje artık çevresel değişkenler (`.env`) ile yapılandırılmıştır. Kök dizindeki `.env` dosyasından port ve API adreslerini değiştirebilirsiniz:
 - **Frontend:** [http://localhost:5173](http://localhost:5173)
 - **Backend (API):** [http://localhost:5000](http://localhost:5000)
 - **Veritabanı:** SQLite (Dosya: `server/database.sqlite`)
@@ -119,7 +120,9 @@ Yönetici paneline erişmek için aşağıdaki bilgileri kullanabilirsiniz:
 ---
 
 ## 🛠️ Teknik Detaylar
-- **Frontend Proxy:** Frontend'den yapılan API istekleri `http://localhost:5000` adresine yönlendirilir.
+- **Merkezi API Yönetimi:** Frontend tarafındaki tüm istekler `src/services/apiConfig.js` üzerinden yönetilir.
+- **Çevresel Değişkenler:** Hem frontend hem backend için `.env` dosyası kullanılır.
+- **Güçlendirilmiş Moderasyon:** Küfür ve topluluk kurallarına aykırı içerikler Regex tabanlı akıllı filtreleme ile kontrol edilir.
 - **Socket.io:** Bildirimler için `5000` portu üzerinden gerçek zamanlı bağlantı kurulur.
 - **Yüklemeler:** Profil ve post görselleri `server/uploads` klasöründe saklanır.
 

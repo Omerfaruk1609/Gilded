@@ -12,6 +12,7 @@ import {
   AutoFixHigh as AutoFixHighIcon 
 } from '@mui/icons-material';
 import toast from 'react-hot-toast';
+import { API_URL } from '../services/apiConfig';
 
 function AdminPanel() {
   const [tab, setTab] = useState(0);
@@ -31,10 +32,10 @@ function AdminPanel() {
     setLoading(true);
     try {
       const [statsRes, usersRes, postsRes, catsRes] = await Promise.all([
-        fetch(`http://localhost:5000/api/admin/stats?admin_email=${currentUser.email}`),
-        fetch(`http://localhost:5000/api/admin/users?admin_email=${currentUser.email}`),
-        fetch(`http://localhost:5000/api/posts`),
-        fetch(`http://localhost:5000/api/wisdom/categories`)
+        fetch(`${API_URL}/admin/stats?admin_email=${currentUser.email}`),
+        fetch(`${API_URL}/admin/users?admin_email=${currentUser.email}`),
+        fetch(`${API_URL}/posts`),
+        fetch(`${API_URL}/wisdom/categories`)
       ]);
 
       if (statsRes.status === 403 || usersRes.status === 403) {
@@ -65,7 +66,7 @@ function AdminPanel() {
 
   const handleUpdateRole = async (userId, newRole) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/users/${userId}/role`, {
+      const res = await fetch(`${API_URL}/admin/users/${userId}/role`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ admin_email: currentUser.email, role: newRole })
@@ -91,7 +92,7 @@ function AdminPanel() {
   const handleDeletePost = async (postId) => {
     if (!window.confirm('Bu içeriği silmek istediğine emin misin?')) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/posts/${postId}`, { method: 'DELETE' });
+      const res = await fetch(`${API_URL}/posts/${postId}`, { method: 'DELETE' });
       if (res.ok) {
         toast.success('İçerik silindi');
         fetchData();
@@ -104,7 +105,7 @@ function AdminPanel() {
   const handleDeleteCategory = async (catId) => {
     if (!window.confirm('Bu kategoriyi silmek istediğine emin misin? Bu kategoriye ait tüm takip ilişkileri de silinecektir.')) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/wisdom/categories/${catId}?adminId=${currentUser.email}`, { method: 'DELETE' });
+      const res = await fetch(`${API_URL}/wisdom/categories/${catId}?adminId=${currentUser.email}`, { method: 'DELETE' });
       if (res.ok) {
         toast.success('Kategori silindi');
         fetchData();

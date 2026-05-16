@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
+import { API_BASE_URL } from '../services/apiConfig';
 import toast from 'react-hot-toast';
 
 const SocketContext = createContext();
@@ -12,7 +13,7 @@ export const SocketProvider = ({ children }) => {
 
   useEffect(() => {
     if (user && user.email) {
-      const newSocket = io('http://localhost:5000');
+      const newSocket = io(API_BASE_URL);
       setSocket(newSocket);
 
       newSocket.emit('join', user.email);

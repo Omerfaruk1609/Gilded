@@ -4,18 +4,20 @@ import { Send as SendIcon } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 import { isAdminUser } from '../../services/auth';
+import { API_URL, API_BASE_URL } from '../../services/apiConfig';
 import '../../css/kintsugi.css';
 
 const CommentItem = ({ 
   comment, 
   currentUser, 
-  isAuthor, 
+  isPostAuthor, // Post sahibi mi?
   replyingTo, 
   setReplyingTo, 
   newComment, 
   setNewComment, 
   handleComment, 
   handleDeleteComment,
+  handleGoldLeaf,
   isAdmin
 }) => {
   const theme = useTheme();
@@ -42,8 +44,26 @@ const CommentItem = ({
           >
             Cevapla
           </Button>
+
+          {isPostAuthor && (
+            <Button 
+              className="comment-action-btn" 
+              sx={{ color: '#D4AF37 !important' }}
+              onClick={() => handleGoldLeaf(comment.id)}
+              startIcon={<span>✨</span>}
+            >
+              Altın Yaprak Ver ({comment.gold_leaves || 0})
+            </Button>
+          )}
+
+          {!isPostAuthor && comment.gold_leaves > 0 && (
+             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 1 }}>
+                <span style={{ fontSize: '0.9rem' }}>✨</span>
+                <Typography sx={{ fontSize: '0.7rem', color: '#D4AF37', fontWeight: 700 }}>{comment.gold_leaves}</Typography>
+             </Box>
+          )}
           
-          {(comment.author_id === currentUser.email || isAuthor || isAdmin) && (
+          {(comment.author_id === currentUser.email || isPostAuthor || isAdmin) && (
             <Button 
               className="comment-action-btn" 
               sx={{ color: '#ff4d4d !important' }}
@@ -82,13 +102,14 @@ const CommentItem = ({
             key={child.id} 
             comment={child} 
             currentUser={currentUser}
-            isAuthor={isAuthor}
+            isPostAuthor={isPostAuthor}
             replyingTo={replyingTo}
             setReplyingTo={setReplyingTo}
             newComment={newComment}
             setNewComment={setNewComment}
             handleComment={handleComment}
             handleDeleteComment={handleDeleteComment}
+            handleGoldLeaf={handleGoldLeaf}
             isAdmin={isAdmin}
           />
         ))}
@@ -98,7 +119,22 @@ const CommentItem = ({
   );
 };
 
-const KintsugiCard = ({ id, content, image_url, post_type = 'normal', author_id, author_name, is_anonymous, initialSupport = 0, initialHasSupported = 0, onDelete }) => {
+const buildCommentTree = (flatComments) => {
+  if (!Array.isArray(flatComments)) return [];
+  const map = {};
+  flatComments.forEach(c => map[c.id] = { ...c, children: [] });
+  const roots = [];
+  flatComments.forEach(c => {
+    if (c.parent_id && map[c.parent_id]) {
+      map[c.parent_id].children.push(map[c.id]);
+    } else {
+      roots.push(map[c.id]);
+    }
+  });
+  return roots;
+};
+
+const KintsugiCard = ({ id, content, image_url, mood, post_type = 'normal', author_id, author_name, author_role, is_anonymous, initialSupport = 0, initialHasSupported = 0, onDelete }) => {
   const theme = useTheme();
   const [supportCount, setSupportCount] = useState(initialSupport);
   const [hasSupported, setHasSupported] = useState(initialHasSupported === 1);
@@ -115,7 +151,7 @@ const KintsugiCard = ({ id, content, image_url, post_type = 'normal', author_id,
   const handleDeletePost = async () => {
     if (!window.confirm('Bu parçayı sonsuza dek silmek istiyor musun?')) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/posts/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_URL}/posts/${id}`, { method: 'DELETE' });
       if (res.ok) {
         toast.success('Parça silindi.');
         if (onDelete) onDelete(id);
@@ -128,9 +164,9 @@ const KintsugiCard = ({ id, content, image_url, post_type = 'normal', author_id,
   const handleDeleteComment = async (commentId) => {
     if (!window.confirm('Bu mesajı silmek istiyor musun?')) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/comments/${commentId}`, { method: 'DELETE' });
+      const res = await fetch(`${API_URL}/comments/${commentId}`, { method: 'DELETE' });
       if (res.ok) {
-        const updatedRes = await fetch(`http://localhost:5000/api/posts/${id}/comments`);
+        const updatedRes = await fetch(`${API_URL}/posts/${id}/comments`);
         const updatedData = await updatedRes.json();
         setComments(updatedData);
         toast.success('Mesaj silindi.');
@@ -146,7 +182,7 @@ const KintsugiCard = ({ id, content, image_url, post_type = 'normal', author_id,
   useEffect(() => {
     const fetchComments = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/posts/${id}/comments`);
+        const res = await fetch(`${API_URL}/posts/${id}/comments`);
         const data = await res.json();
         setComments(data);
       } catch (err) {
@@ -192,7 +228,7 @@ const KintsugiCard = ({ id, content, image_url, post_type = 'normal', author_id,
     if (hasSupported || loading) return;
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/posts/${id}/support`, {
+      const response = await fetch(`${API_URL}/posts/${id}/support`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: currentUser.email }),
@@ -219,13 +255,31 @@ const KintsugiCard = ({ id, content, image_url, post_type = 'normal', author_id,
     }
   };
 
+  const handleGoldLeaf = async (commentId) => {
+    try {
+      const res = await fetch(`${API_URL}/comments/${commentId}/gold-leaf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: currentUser.email })
+      });
+      if (res.ok) {
+        toast.success('Altın yaprak iliştirildi ✨');
+        const updatedRes = await fetch(`${API_URL}/posts/${id}/comments`);
+        const updatedData = await updatedRes.json();
+        setComments(updatedData);
+      }
+    } catch (err) {
+      toast.error('Hata oluştu');
+    }
+  };
+
   const handleComment = async (e, parentId = null) => {
     if (e) e.preventDefault();
     if (!newComment.trim() || loading) return;
 
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/posts/${id}/comments`, {
+      const response = await fetch(`${API_URL}/comments/${id}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -299,23 +353,55 @@ const KintsugiCard = ({ id, content, image_url, post_type = 'normal', author_id,
       <div className="kintsugi-content">
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div className="kintsugi-author">
-            {post_type === 'wisdom' ? 'Bilge Bir Ruh' : 'Bir Ruh'}
-            {isAuthor && <span className="author-badge">Senin Parçan</span>}
-            {post_type === 'wisdom' && <span className="author-badge" style={{ background: 'rgba(212,175,55,0.2)', color: '#D4AF37' }}>Bilgelik</span>}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography sx={{ fontWeight: 600, fontSize: '0.9rem', color: '#fff' }}>
+                {(is_anonymous === 0 || is_anonymous === '0') ? (author_name || 'İsimsiz Ruh') : (post_type === 'wisdom' ? 'Bilge Bir Ruh' : 'Bir Ruh')}
+              </Typography>
+              
+              {author_role === 'ADMIN' && (
+                <span className="author-badge" style={{ background: 'rgba(212,175,55,0.2)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.3)' }}>
+                  Yönetici
+                </span>
+              )}
+              {author_role === 'BILGE' && (
+                <span className="author-badge" style={{ background: 'rgba(251,146,60,0.2)', color: '#fb923c', border: '1px solid rgba(251,146,60,0.3)' }}>
+                  Bilge
+                </span>
+              )}
+              {isAuthor && <span className="author-badge" style={{ background: 'rgba(255,255,255,0.1)', color: '#94a3b8' }}>Sen</span>}
+            </Box>
           </div>
-          
-          {(isAuthor || isAdmin) && (
-            <IconButton onClick={handleDeletePost} sx={{ color: 'rgba(255,77,77,0.3)', '&:hover': { color: '#ff4d4d' } }}>
-              <span style={{ fontSize: '1.2rem' }}>×</span>
-            </IconButton>
-          )}
+
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            {mood && (
+              <Box sx={{ 
+                px: 1, 
+                py: 0.3, 
+                bgcolor: 'rgba(255,255,255,0.05)', 
+                borderRadius: '10px',
+                border: '1px solid rgba(255,255,255,0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5
+              }}>
+                <Typography sx={{ fontSize: '0.7rem', color: '#888' }}>Hissiyat:</Typography>
+                <Typography sx={{ fontSize: '0.75rem', color: '#fff', fontWeight: 600 }}>{mood}</Typography>
+              </Box>
+            )}
+            
+            {(isAuthor || isAdmin) && (
+              <IconButton onClick={handleDeletePost} sx={{ color: 'rgba(255,77,77,0.3)', '&:hover': { color: '#ff4d4d' } }}>
+                <span style={{ fontSize: '1.2rem' }}>×</span>
+              </IconButton>
+            )}
+          </Box>
         </Box>
         <p className="kintsugi-text">{content}</p>
         
         {image_url && (
           <Box sx={{ mt: 2, mb: 2, textAlign: 'center' }}>
             <img 
-              src={`http://localhost:5000${image_url}`} 
+              src={`${API_BASE_URL}${image_url}`} 
               alt="Post" 
               style={{ 
                 maxWidth: '100%', 
@@ -400,13 +486,14 @@ const KintsugiCard = ({ id, content, image_url, post_type = 'normal', author_id,
                 key={c.id} 
                 comment={c} 
                 currentUser={currentUser}
-                isAuthor={isAuthor}
+                isPostAuthor={isAuthor}
                 replyingTo={replyingTo}
                 setReplyingTo={setReplyingTo}
                 newComment={newComment}
                 setNewComment={setNewComment}
                 handleComment={handleComment}
                 handleDeleteComment={handleDeleteComment}
+                handleGoldLeaf={handleGoldLeaf}
                 isAdmin={isAdmin}
               />
             ))}

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Box, TextField, Button, Paper, Typography, useTheme, FormControlLabel, Checkbox } from '@mui/material';
 import toast from 'react-hot-toast';
 import { isAdminUser, isBilgeUser, getStoredUser } from '../../services/auth';
+import { API_URL } from '../../services/apiConfig';
 
 const PostForm = ({ onPostCreated }) => {
   const [content, setContent] = useState('');
@@ -11,6 +12,8 @@ const PostForm = ({ onPostCreated }) => {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [isAnonymous, setIsAnonymous] = useState(true);
+  const [mood, setMood] = useState(null);
 
   const [image, setImage] = useState(null);
   const theme = useTheme();
@@ -20,7 +23,7 @@ const PostForm = ({ onPostCreated }) => {
   React.useEffect(() => {
     if (isBilge || isAdminUser(getStoredUser())) {
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-      fetch(`http://localhost:5000/api/wisdom/categories?userId=${currentUser.email}`)
+      fetch(`${API_URL}/wisdom/categories?userId=${currentUser.email}`)
         .then(res => res.json())
         .then(data => setCategories(data));
     }
@@ -38,7 +41,7 @@ const PostForm = ({ onPostCreated }) => {
 
       // Eğer yeni kategori oluşturuluyorsa
       if (isWisdom && isCreatingCategory && newCategoryName.trim()) {
-        const catRes = await fetch('http://localhost:5000/api/wisdom/categories', {
+        const catRes = await fetch(`${API_URL}/wisdom/categories`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: newCategoryName.trim(), userId: currentUser.email })
@@ -52,15 +55,18 @@ const PostForm = ({ onPostCreated }) => {
       formData.append('content', content);
       formData.append('author_id', currentUser.email);
       formData.append('post_type', isWisdom ? 'wisdom' : 'normal');
-      formData.append('is_anonymous', true);
+      formData.append('is_anonymous', isAnonymous ? 1 : 0);
       if (isWisdom && finalCategoryId) {
         formData.append('category_id', finalCategoryId);
+      }
+      if (mood) {
+        formData.append('mood', mood);
       }
       if (image) {
         formData.append('image', image);
       }
 
-      const response = await fetch('http://localhost:5000/api/posts', {
+      const response = await fetch(`${API_URL}/posts`, {
         method: 'POST',
         body: formData,
       });
@@ -105,7 +111,7 @@ const PostForm = ({ onPostCreated }) => {
           value={content}
           onChange={(e) => setContent(e.target.value)}
           sx={{ 
-            mb: 2,
+            mb: 1,
             '& .MuiOutlinedInput-root': {
               color: theme.palette.text.primary,
               '& fieldset': { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)' },
@@ -113,6 +119,40 @@ const PostForm = ({ onPostCreated }) => {
             }
           }}
         />
+
+        {/* Mood Selector */}
+        <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+          {[
+            { label: 'Kırgın', emoji: '💔' },
+            { label: 'Yorgun', emoji: '😴' },
+            { label: 'Üzgün', emoji: '😢' },
+            { label: 'Öfkeli', emoji: '🔥' },
+            { label: 'Umutlu', emoji: '🌱' },
+            { label: 'Huzurlu', emoji: '🧘' }
+          ].map((m) => (
+            <Box 
+              key={m.label}
+              onClick={() => setMood(mood === m.label ? null : m.label)}
+              sx={{ 
+                cursor: 'pointer',
+                px: 1.5,
+                py: 0.5,
+                borderRadius: '15px',
+                border: '1px solid',
+                borderColor: mood === m.label ? '#D4AF37' : 'rgba(255,255,255,0.1)',
+                bgcolor: mood === m.label ? 'rgba(212,175,55,0.1)' : 'transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                transition: 'all 0.2s',
+                '&:hover': { borderColor: '#D4AF37' }
+              }}
+            >
+              <span style={{ fontSize: '0.9rem' }}>{m.emoji}</span>
+              <Typography sx={{ fontSize: '0.75rem', color: mood === m.label ? '#D4AF37' : '#888' }}>{m.label}</Typography>
+            </Box>
+          ))}
+        </Box>
         {image && (
           <Box sx={{ mb: 2, position: 'relative', display: 'inline-block' }}>
             <img src={URL.createObjectURL(image)} alt="Preview" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', border: '1px solid rgba(212,175,55,0.3)' }} />
@@ -125,26 +165,40 @@ const PostForm = ({ onPostCreated }) => {
             </Button>
           </Box>
         )}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Button
-            variant="outlined"
-            component="label"
-            sx={{
-              color: theme.palette.text.secondary,
-              borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)',
-              '&:hover': { borderColor: '#D4AF37', color: '#D4AF37' }
-            }}
-          >
-            Resim Ekle
-            <input
-              type="file"
-              hidden
-              accept="image/*"
-              onChange={(e) => {
-                if (e.target.files[0]) setImage(e.target.files[0]);
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Button
+              variant="outlined"
+              component="label"
+              size="small"
+              sx={{
+                color: theme.palette.text.secondary,
+                borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)',
+                '&:hover': { borderColor: '#D4AF37', color: '#D4AF37' }
               }}
+            >
+              Resim
+              <input
+                type="file"
+                hidden
+                accept="image/*"
+                onChange={(e) => {
+                  if (e.target.files[0]) setImage(e.target.files[0]);
+                }}
+              />
+            </Button>
+
+            <FormControlLabel
+              control={
+                <Checkbox 
+                  checked={isAnonymous} 
+                  onChange={(e) => setIsAnonymous(e.target.checked)} 
+                  sx={{ color: '#D4AF37', '&.Mui-checked': { color: '#D4AF37' }, p: 0.5 }} 
+                />
+              }
+              label={<Typography sx={{ color: theme.palette.text.secondary, fontSize: '0.75rem' }}>Anonim Paylaş</Typography>}
             />
-          </Button>
+          </Box>
 
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
             {isBilge && (

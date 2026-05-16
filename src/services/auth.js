@@ -1,3 +1,5 @@
+import { API_URL } from './apiConfig';
+
 export const getStoredUser = () => {
     const user = localStorage.getItem('user');
     return user ? JSON.parse(user) : null;
@@ -16,7 +18,7 @@ export const isBilgeUser = (user) => {
 };
 
 export const loginUser = async (email, password) => {
-    const response = await fetch('http://localhost:5000/api/auth/login', {
+    const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -28,7 +30,7 @@ export const loginUser = async (email, password) => {
 };
 
 export const registerUser = async (email, password, ad) => {
-    const response = await fetch('http://localhost:5000/api/auth/register', {
+    const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, ad })
@@ -41,4 +43,16 @@ export const registerUser = async (email, password, ad) => {
 export const logoutUser = async () => {
     // Backend logout logic would go here
     return Promise.resolve();
+};
+
+export const getBadge = (stats) => {
+    if (!stats) return null;
+    const { received, given } = stats;
+    
+    if (given >= 20) return { label: 'Altın Eller', icon: '✨', color: '#D4AF37' };
+    if (given >= 10) return { label: 'Şifa Dağıtıcı', icon: '🌱', color: '#4ADE80' };
+    if (received >= 10) return { label: 'Kintsugi Ustası', icon: '🏺', color: '#fb923c' };
+    if (given >= 1) return { label: 'Yeni Ruh', icon: '🌑', color: '#94a3b8' };
+    
+    return null;
 };

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Container, Typography, Box, CircularProgress, Button } from '@mui/material';
 import toast from 'react-hot-toast';
 import KintsugiCard from '../components/kintsugi/KintsugiCard';
+import { API_URL } from '../services/apiConfig';
 
 const WisdomPage = () => {
   const [posts, setPosts] = useState([]);
@@ -18,7 +19,7 @@ const WisdomPage = () => {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/wisdom/categories?userId=${currentUser.email}`);
+      const res = await fetch(`${API_URL}/wisdom/categories?userId=${currentUser.email}`);
       const data = await res.json();
       setCategories(data);
     } catch (err) {
@@ -29,7 +30,7 @@ const WisdomPage = () => {
   const fetchPosts = async () => {
     setLoading(true);
     try {
-      let url = `http://localhost:5000/api/posts?postType=wisdom&userId=${currentUser.email}`;
+      let url = `${API_URL}/posts?postType=wisdom&userId=${currentUser.email}`;
       if (selectedCategory) {
         url += `&categoryId=${selectedCategory}`;
       }
@@ -45,7 +46,7 @@ const WisdomPage = () => {
 
   const handleFollow = async (categoryId) => {
     try {
-      const res = await fetch('http://localhost:5000/api/wisdom/follow', {
+      const res = await fetch(`${API_URL}/wisdom/follow`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: currentUser.email, categoryId })
@@ -161,9 +162,11 @@ const WisdomPage = () => {
                   id={post.id}
                   content={post.content}
                   image_url={post.image_url}
+                  mood={post.mood}
                   post_type={post.post_type}
                   author_id={post.author_id}
                   author_name={post.author_name}
+                  author_role={post.author_role}
                   is_anonymous={post.is_anonymous}
                   initialSupport={post.support_count}
                   initialHasSupported={post.has_supported}

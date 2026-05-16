@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
+require('dotenv').config();
 const { Server } = require('socket.io');
 const db = require('./db.cjs');
 const bcrypt = require('bcryptjs');
@@ -16,7 +17,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
@@ -25,7 +26,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
     methods: ["GET", "POST"]
   }
 });
@@ -53,7 +54,7 @@ app.get('/api/posts', (req, res) => {
 
     if (userId) {
       let query = `
-        SELECT p.*, u.ad as author_name, c.name as category_name,
+        SELECT p.*, u.ad as author_name, u.role as author_role, c.name as category_name,
         (SELECT COUNT(*) FROM supports s WHERE s.post_id = p.id AND s.user_id = ?) as has_supported
         FROM posts p 
         LEFT JOIN users u ON p.author_id = u.email
@@ -82,7 +83,7 @@ app.get('/api/posts', (req, res) => {
         posts = [];
       } else {
         const query = `
-          SELECT p.*, u.ad as author_name, c.name as category_name
+          SELECT p.*, u.ad as author_name, u.role as author_role, c.name as category_name
           FROM posts p 
           LEFT JOIN users u ON p.author_id = u.email 
           LEFT JOIN wisdom_categories c ON p.category_id = c.id
@@ -112,7 +113,13 @@ app.get('/api/posts', (req, res) => {
 app.get('/api/users/:email/posts', (req, res) => {
   const { email } = req.params;
   try {
-    const posts = db.prepare('SELECT * FROM posts WHERE author_id = ? ORDER BY created_at DESC').all(email);
+    const posts = db.prepare(`
+      SELECT p.*, u.ad as author_name, u.role as author_role 
+      FROM posts p 
+      LEFT JOIN users u ON p.author_id = u.email 
+      WHERE p.author_id = ? 
+      ORDER BY p.created_at DESC
+    `).all(email);
     res.json(posts);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -141,7 +148,7 @@ app.get('/api/posts/:id', (req, res) => {
   
   try {
     let query = `
-      SELECT p.*, u.ad as author_name 
+      SELECT p.*, u.ad as author_name, u.role as author_role
       FROM posts p 
       LEFT JOIN users u ON p.author_id = u.email 
       WHERE p.id = ?
@@ -149,19 +156,21 @@ app.get('/api/posts/:id', (req, res) => {
     
     if (userId) {
       query = `
-        SELECT p.*, u.ad as author_name,
-        (SELECT COUNT(*) FROM supports s WHERE s.post_id = p.id AND s.user_id = '${userId}') as has_supported
+        SELECT p.*, u.ad as author_name, u.role as author_role,
+        (SELECT COUNT(*) FROM supports s WHERE s.post_id = p.id AND s.user_id = ?) as has_supported
         FROM posts p 
         LEFT JOIN users u ON p.author_id = u.email 
         WHERE p.id = ?
       `;
+      const post = db.prepare(query).get(userId, id);
+      if (!post) return res.status(404).json({ error: 'Post bulunamadı' });
+      res.json(post);
+    } else {
+      const post = db.prepare(query).get(id);
+      if (!post) return res.status(404).json({ error: 'Post bulunamadı' });
+      res.json(post);
     }
-    
-    const post = db.prepare(query).get(id);
-    if (!post) {
-      return res.status(404).json({ error: 'Post bulunamadı' });
-    }
-    res.json(post);
+    return; // Stop here to avoid double res.json below
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -185,7 +194,7 @@ app.get('/api/posts/:id/comments', (req, res) => {
 
 // Yeni post ekle
 app.post('/api/posts', upload.single('image'), (req, res) => {
-  const { content, author_id, post_type = 'normal', category_id = null } = req.body;
+  const { content, author_id, post_type = 'normal', category_id = null, is_anonymous = 1, mood = null } = req.body;
   const image_url = req.file ? `/uploads/${req.file.filename}` : null;
   if (!content) return res.status(400).json({ error: 'İçerik gerekli' });
 
@@ -208,7 +217,7 @@ app.post('/api/posts', upload.single('image'), (req, res) => {
       }
     }
 
-    const info = db.prepare('INSERT INTO posts (content, author_id, image_url, post_type, is_anonymous, category_id) VALUES (?, ?, ?, ?, ?, ?)').run(content, author_id, image_url, post_type, 1, category_id);
+    const info = db.prepare('INSERT INTO posts (content, author_id, image_url, post_type, is_anonymous, category_id, mood) VALUES (?, ?, ?, ?, ?, ?, ?)').run(content, author_id, image_url, post_type, is_anonymous, category_id, mood);
     const newPost = db.prepare('SELECT * FROM posts WHERE id = ?').get(info.lastInsertRowid);
     res.status(201).json(newPost);
   } catch (error) {
@@ -320,6 +329,18 @@ app.post('/api/posts/:id/comments', async (req, res) => {
     `).all(id);
     
     res.json(allComments);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Altın Yaprak Ver (Teşekkür)
+app.post('/api/comments/:id/gold-leaf', (req, res) => {
+  const { id } = req.params;
+  try {
+    db.prepare('UPDATE comments SET gold_leaves = gold_leaves + 1 WHERE id = ?').run(id);
+    const comment = db.prepare('SELECT * FROM comments WHERE id = ?').get(id);
+    res.json(comment);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

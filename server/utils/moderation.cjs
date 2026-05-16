@@ -5,24 +5,17 @@ const FORBIDDEN_WORDS = [
 
 function containsProfanity(text) {
   if (!text) return false;
-  const normalizedText = text.toLowerCase().replace(/[.,!?]/g, '');
-  const words = normalizedText.split(/\s+/);
+  const normalizedText = text.toLowerCase().trim();
 
-  for (const word of words) {
-    if (FORBIDDEN_WORDS.includes(word)) {
-      return true;
-    }
-  }
-
-  // Daha geniş bir arama için: kelime içinde geçiyor mu?
   for (const forbidden of FORBIDDEN_WORDS) {
-    if (normalizedText.includes(forbidden)) {
-      // Çok katı olabilir, kelime başı/sonu sınırlarına bakmak daha iyi olabilir.
-      // Şimdilik RegExp ile tam eşleşme kontrolü:
-      const regex = new RegExp(`\\b${forbidden}\\b`, 'i');
-      if (regex.test(normalizedText)) {
-        return true;
-      }
+    // Kelimenin harfleri arasına gelebilecek olası karakterleri (nokta, boşluk, alt tire vb.) yakalayan regex
+    // Örn: "k.ü.f.ü.r", "k ü f ü r", "k_ü_f_u_r" gibi varyasyonları yakalar.
+    const pattern = forbidden.split('').join('[\\s._-]*');
+    const regex = new RegExp(`\\b${pattern}\\b`, 'i');
+    
+    if (regex.test(normalizedText)) {
+      console.log(`Küfür filtresi: [${forbidden}] tespit edildi.`);
+      return true;
     }
   }
 

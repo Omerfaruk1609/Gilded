@@ -35,9 +35,9 @@ try {
   db.exec("ALTER TABLE wisdom_categories ADD COLUMN created_by TEXT");
 } catch (e) {}
 
-// Mevcut kategorileri temizle (İstek üzerine)
-db.exec('DELETE FROM wisdom_categories');
-db.exec('DELETE FROM follows');
+// Mevcut kategorileri temizle (İstek üzerine) - ARTIK KAPALI
+// db.exec('DELETE FROM wisdom_categories');
+// db.exec('DELETE FROM follows');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS follows (
@@ -59,6 +59,10 @@ try {
   db.exec("ALTER TABLE posts ADD COLUMN category_id INTEGER DEFAULT NULL");
 } catch (e) {}
 
+try {
+  db.exec("ALTER TABLE posts ADD COLUMN mood TEXT DEFAULT NULL");
+} catch (e) {}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS notifications (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -78,12 +82,17 @@ db.exec(`
     author_id TEXT,
     parent_id INTEGER DEFAULT NULL,
     score INTEGER DEFAULT 0,
+    gold_leaves INTEGER DEFAULT 0,
     is_anonymous BOOLEAN DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE,
     FOREIGN KEY (parent_id) REFERENCES comments (id) ON DELETE CASCADE
   )
 `);
+
+try {
+  db.exec("ALTER TABLE comments ADD COLUMN gold_leaves INTEGER DEFAULT 0");
+} catch (e) {}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS supports (

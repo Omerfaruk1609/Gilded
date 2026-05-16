@@ -3,6 +3,7 @@ import { IconButton, Badge, Menu, MenuItem, Typography, Box } from '@mui/materia
 import { Notifications as NotificationsIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { getStoredUser } from '../../services/auth';
+import { API_URL } from '../../services/apiConfig';
 
 const NotificationsMenu = () => {
   const [notifications, setNotifications] = useState([]);
@@ -18,7 +19,7 @@ const NotificationsMenu = () => {
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/notifications/${user.email}`);
+      const res = await fetch(`${API_URL}/notifications/${user.email}`);
       if (res.ok) {
         const data = await res.json();
         setNotifications(data);
@@ -39,7 +40,7 @@ const NotificationsMenu = () => {
   const markAsRead = async (notif) => {
     try {
       if (!notif.is_read) {
-        await fetch(`http://localhost:5000/api/notifications/${notif.id}/read`, { method: 'PUT' });
+        await fetch(`${API_URL}/notifications/${notif.id}/read`, { method: 'PUT' });
         setNotifications(notifications.map(n => n.id === notif.id ? { ...n, is_read: 1 } : n));
       }
       handleClose();

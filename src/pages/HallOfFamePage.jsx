@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Typography, Container } from '@mui/material';
 import KintsugiCard from '../components/kintsugi/KintsugiCard';
+import { API_URL } from '../services/apiConfig';
 
 function HallOfFamePage() {
   const [posts, setPosts] = useState([]);
@@ -10,7 +11,7 @@ function HallOfFamePage() {
 
   const fetchPosts = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/posts?userId=${currentUser.email}&repaired=true`);
+      const response = await fetch(`${API_URL}/posts?userId=${currentUser.email}&repaired=true`);
       const data = await response.json();
       setPosts(data);
     } catch (error) {
@@ -56,8 +57,10 @@ function HallOfFamePage() {
               id={post.id}
               content={post.content}
               image_url={post.image_url}
+              mood={post.mood}
               author_id={post.author_id}
               author_name={post.author_name}
+              author_role={post.author_role}
               is_anonymous={post.is_anonymous}
               initialSupport={post.support_count}
               initialHasSupported={post.has_supported}
