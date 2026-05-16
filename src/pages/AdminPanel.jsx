@@ -18,6 +18,7 @@ function AdminPanel() {
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [posts, setPosts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -29,10 +30,11 @@ function AdminPanel() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [statsRes, usersRes, postsRes] = await Promise.all([
+      const [statsRes, usersRes, postsRes, catsRes] = await Promise.all([
         fetch(`http://localhost:5000/api/admin/stats?admin_email=${currentUser.email}`),
         fetch(`http://localhost:5000/api/admin/users?admin_email=${currentUser.email}`),
-        fetch(`http://localhost:5000/api/posts`)
+        fetch(`http://localhost:5000/api/posts`),
+        fetch(`http://localhost:5000/api/wisdom/categories`)
       ]);
 
       if (statsRes.status === 403 || usersRes.status === 403) {
@@ -48,10 +50,12 @@ function AdminPanel() {
       const statsData = await statsRes.json();
       const usersData = await usersRes.json();
       const postsData = await postsRes.json();
+      const catsData = await catsRes.json();
 
       setStats(statsData);
       setUsers(Array.isArray(usersData) ? usersData : []);
       setPosts(Array.isArray(postsData) ? postsData : []);
+      setCategories(Array.isArray(catsData) ? catsData : []);
     } catch (error) {
       toast.error(error.message || 'Veriler yüklenemedi');
     } finally {
@@ -91,6 +95,22 @@ function AdminPanel() {
       if (res.ok) {
         toast.success('İçerik silindi');
         fetchData();
+      }
+    } catch (error) {
+      toast.error('Hata oluştu');
+    }
+  };
+
+  const handleDeleteCategory = async (catId) => {
+    if (!window.confirm('Bu kategoriyi silmek istediğine emin misin? Bu kategoriye ait tüm takip ilişkileri de silinecektir.')) return;
+    try {
+      const res = await fetch(`http://localhost:5000/api/wisdom/categories/${catId}?adminId=${currentUser.email}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success('Kategori silindi');
+        fetchData();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Hata oluştu');
       }
     } catch (error) {
       toast.error('Hata oluştu');
@@ -139,6 +159,7 @@ function AdminPanel() {
         <Tabs value={tab} onChange={(e, v) => setTab(v)} textColor="inherit" TabIndicatorProps={{ style: { background: '#D4AF37' } }}>
           <Tab label="İçerik Yönetimi" sx={{ color: '#94a3b8', '&.Mui-selected': { color: '#D4AF37' } }} />
           <Tab label="Kullanıcı Yönetimi" sx={{ color: '#94a3b8', '&.Mui-selected': { color: '#D4AF37' } }} />
+          <Tab label="Kategori Yönetimi" sx={{ color: '#94a3b8', '&.Mui-selected': { color: '#D4AF37' } }} />
         </Tabs>
       </Box>
 
@@ -235,6 +256,34 @@ function AdminPanel() {
                         {user.role === 'BILGE' ? 'Bilgelik Al' : 'Bilge Yap'}
                       </Button>
                     </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
+      {/* Categories Tab */}
+      {tab === 2 && (
+        <TableContainer component={Paper} sx={{ bgcolor: 'transparent', border: '1px solid rgba(212, 175, 55, 0.1)', borderRadius: 4 }}>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ bgcolor: 'rgba(212, 175, 55, 0.05)' }}>
+                <TableCell sx={{ color: '#D4AF37', fontWeight: 'bold' }}>Kategori Adı</TableCell>
+                <TableCell sx={{ color: '#D4AF37', fontWeight: 'bold' }}>Slug</TableCell>
+                <TableCell sx={{ color: '#D4AF37', fontWeight: 'bold' }}>İşlem</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {categories.map((cat) => (
+                <TableRow key={cat.id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
+                  <TableCell sx={{ color: '#fff' }}>{cat.name}</TableCell>
+                  <TableCell sx={{ color: '#94a3b8' }}>{cat.slug}</TableCell>
+                  <TableCell>
+                    <IconButton onClick={() => handleDeleteCategory(cat.id)} sx={{ color: '#ff4d4d' }}>
+                      <DeleteIcon />
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))}

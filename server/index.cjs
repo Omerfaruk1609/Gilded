@@ -1,10 +1,13 @@
 const express = require('express');
 const cors = require('cors');
+const http = require('http');
+const { Server } = require('socket.io');
 const db = require('./db.cjs');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const path = require('path');
 const { containsProfanity } = require('./utils/moderation.cjs');
+const { analyzeComment } = require('./utils/aiModeration.cjs');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, 'server/uploads/'),
@@ -19,30 +22,75 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST"]
+  }
+});
+
+io.on('connection', (socket) => {
+  console.log('Bir kullanıcı bağlandı:', socket.id);
+
+  socket.on('join', (userId) => {
+    socket.join(userId);
+    console.log(`Kullanıcı ${userId} odasına katıldı.`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Kullanıcı ayrıldı');
+  });
+});
+
 // Tüm postları getir
 app.get('/api/posts', (req, res) => {
   const userId = req.query.userId;
   try {
+    const postType = req.query.postType || 'normal'; // Varsayılan: normal postlar
     let posts;
-    const isRepairedFilter = req.query.repaired === 'true' ? 'WHERE p.is_repaired = 1' : '';
+    const isRepairedFilter = req.query.repaired === 'true' ? 'AND p.is_repaired = 1' : '';
 
     if (userId) {
-      const query = `
-        SELECT p.*, u.ad as author_name,
+      let query = `
+        SELECT p.*, u.ad as author_name, c.name as category_name,
         (SELECT COUNT(*) FROM supports s WHERE s.post_id = p.id AND s.user_id = ?) as has_supported
         FROM posts p 
         LEFT JOIN users u ON p.author_id = u.email
+        LEFT JOIN wisdom_categories c ON p.category_id = c.id
+        WHERE p.post_type = ?
         ${isRepairedFilter}
       `;
-      posts = db.prepare(query).all(userId);
+
+      if (postType === 'wisdom') {
+        if (req.query.categoryId) {
+          // Belirli bir kategori seçildiyse: Takip kontrolü
+          query += ` AND p.category_id = ${req.query.categoryId} AND EXISTS (SELECT 1 FROM follows f WHERE f.category_id = p.category_id AND f.user_id = ?)`;
+          posts = db.prepare(query).all(userId, postType, userId);
+        } else {
+          // Genel Bilgelik Panosu: Sadece takip edilen tüm kategoriler
+          query += ` AND EXISTS (SELECT 1 FROM follows f WHERE f.category_id = p.category_id AND f.user_id = ?)`;
+          posts = db.prepare(query).all(userId, postType, userId);
+        }
+      } else {
+        // Normal postlar
+        posts = db.prepare(query).all(userId, postType);
+      }
     } else {
-      const query = `
-        SELECT p.*, u.ad as author_name 
-        FROM posts p 
-        LEFT JOIN users u ON p.author_id = u.email 
-        ${isRepairedFilter}
-      `;
-      posts = db.prepare(query).all();
+      // Misafirler (Eğer varsa) sadece normal postları görsün, bilgelik gizli
+      if (postType === 'wisdom') {
+        posts = [];
+      } else {
+        const query = `
+          SELECT p.*, u.ad as author_name, c.name as category_name
+          FROM posts p 
+          LEFT JOIN users u ON p.author_id = u.email 
+          LEFT JOIN wisdom_categories c ON p.category_id = c.id
+          WHERE p.post_type = 'normal'
+          ${isRepairedFilter}
+        `;
+        posts = db.prepare(query).all();
+      }
     }
     
     // Hacker News / Reddit benzeri Sıcaklık Algoritması
@@ -137,7 +185,7 @@ app.get('/api/posts/:id/comments', (req, res) => {
 
 // Yeni post ekle
 app.post('/api/posts', upload.single('image'), (req, res) => {
-  const { content, author_id, post_type = 'normal' } = req.body;
+  const { content, author_id, post_type = 'normal', category_id = null } = req.body;
   const image_url = req.file ? `/uploads/${req.file.filename}` : null;
   if (!content) return res.status(400).json({ error: 'İçerik gerekli' });
 
@@ -146,15 +194,21 @@ app.post('/api/posts', upload.single('image'), (req, res) => {
   }
 
   try {
-    // Admin kontrolü
-    if (post_type === 'wisdom') {
-      const user = db.prepare('SELECT role FROM users WHERE email = ?').get(author_id);
-      if (!user || (user.role !== 'ADMIN' && user.role !== 'BILGE')) {
-        return res.status(403).json({ error: 'Bilgelik sözü paylaşmak için yetki gereklidir.' });
+    // Yetki Kontrolü
+    const user = db.prepare('SELECT role FROM users WHERE email = ?').get(author_id);
+    if (post_type === 'wisdom' && user.role !== 'ADMIN' && user.role !== 'BILGE') {
+      return res.status(403).json({ error: 'Bilgelik sözü paylaşma yetkiniz yok.' });
+    }
+
+    // Bilge ise sadece kendisinin açtığı kategorilere atabilir
+    if (post_type === 'wisdom' && user.role === 'BILGE' && category_id) {
+      const category = db.prepare('SELECT created_by FROM wisdom_categories WHERE id = ?').get(category_id);
+      if (!category || category.created_by !== author_id) {
+        return res.status(403).json({ error: 'Sadece kendi oluşturduğunuz kategorilerde paylaşım yapabilirsiniz.' });
       }
     }
 
-    const info = db.prepare('INSERT INTO posts (content, author_id, image_url, post_type, is_anonymous) VALUES (?, ?, ?, ?, ?)').run(content, author_id, image_url, post_type, 1);
+    const info = db.prepare('INSERT INTO posts (content, author_id, image_url, post_type, is_anonymous, category_id) VALUES (?, ?, ?, ?, ?, ?)').run(content, author_id, image_url, post_type, 1, category_id);
     const newPost = db.prepare('SELECT * FROM posts WHERE id = ?').get(info.lastInsertRowid);
     res.status(201).json(newPost);
   } catch (error) {
@@ -189,6 +243,14 @@ app.post('/api/posts/:id/support', (req, res) => {
     if (post.author_id !== user_id) {
       db.prepare('INSERT INTO notifications (user_id, type, post_id) VALUES (?, ?, ?)')
         .run(post.author_id, 'support', id);
+      
+      // Real-time bildirim gönder
+      io.to(post.author_id).emit('new_notification', {
+        type: 'support',
+        post_id: id,
+        message: 'Birisi yaranı altınla dikti...',
+        timestamp: new Date()
+      });
     }
 
     res.json(updatedPost);
@@ -198,7 +260,7 @@ app.post('/api/posts/:id/support', (req, res) => {
 });
 
 // Yorum At
-app.post('/api/posts/:id/comments', (req, res) => {
+app.post('/api/posts/:id/comments', async (req, res) => {
   const { id } = req.params;
   const { content, author_id } = req.body;
   
@@ -209,6 +271,14 @@ app.post('/api/posts/:id/comments', (req, res) => {
   }
 
   try {
+    // AI Moderasyonu
+    const aiVerdict = await analyzeComment(content);
+    if (aiVerdict === 'REJECT') {
+      return res.status(400).json({ 
+        error: 'Bu mesaj topluluk ruhuna (destekleyici ve iyileştirici olma) uygun bulunmadı. Lütfen daha nazik ve destekleyici bir dil kullanmayı dene.' 
+      });
+    }
+
     const parentId = req.body.parent_id || null;
     db.prepare('INSERT INTO comments (post_id, content, author_id, parent_id, is_anonymous) VALUES (?, ?, ?, ?, ?)')
       .run(id, content, author_id, parentId, 1);
@@ -220,10 +290,24 @@ app.post('/api/posts/:id/comments', (req, res) => {
       if (parentComment && parentComment.author_id !== author_id) {
         db.prepare('INSERT INTO notifications (user_id, type, post_id) VALUES (?, ?, ?)')
           .run(parentComment.author_id, 'comment_reply', id);
+        
+        io.to(parentComment.author_id).emit('new_notification', {
+          type: 'comment_reply',
+          post_id: id,
+          message: 'Birisi destek mesajına yanıt verdi...',
+          timestamp: new Date()
+        });
       }
     } else if (post && post.author_id !== author_id) {
       db.prepare('INSERT INTO notifications (user_id, type, post_id) VALUES (?, ?, ?)')
         .run(post.author_id, 'post_comment', id);
+      
+      io.to(post.author_id).emit('new_notification', {
+        type: 'post_comment',
+        post_id: id,
+        message: 'Yaran için yeni bir destek mesajı var...',
+        timestamp: new Date()
+      });
     }
     
     // Güncel ve isimli listeyi çek
@@ -416,6 +500,83 @@ app.put('/api/admin/users/:id/role', (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Backend sunucusu http://localhost:${PORT} adresinde çalışıyor`);
+// --- WISDOM CATEGORIES ---
+
+app.get('/api/wisdom/categories', (req, res) => {
+  try {
+    const userId = req.query.userId;
+    let categories;
+    if (userId) {
+      const user = db.prepare('SELECT role FROM users WHERE email = ?').get(userId);
+      // Tüm kullanıcılar (Admin, Bilge, Üye) tüm kategorileri görmeli 
+      // ama Bilge sadece kendi açtığına post atabilmeli.
+      categories = db.prepare(`
+        SELECT c.*, 
+        (SELECT COUNT(*) FROM follows f WHERE f.category_id = c.id AND f.user_id = ?) as is_followed,
+        (SELECT COUNT(*) FROM follows f WHERE f.category_id = c.id) as follower_count,
+        CASE WHEN c.created_by = ? THEN 1 ELSE 0 END as is_owner
+        FROM wisdom_categories c
+      `).all(userId, userId);
+    } else {
+      categories = db.prepare(`
+        SELECT c.*, 
+        (SELECT COUNT(*) FROM follows f WHERE f.category_id = c.id) as follower_count
+        FROM wisdom_categories c
+      `).all();
+    }
+    res.json(categories);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/wisdom/categories', (req, res) => {
+  const { name, userId } = req.body;
+  if (!name) return res.status(400).json({ error: 'Kategori adı gerekli' });
+  const slug = name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+  try {
+    const info = db.prepare('INSERT INTO wisdom_categories (name, slug, created_by) VALUES (?, ?, ?)').run(name, slug, userId);
+    res.status(201).json({ id: info.lastInsertRowid, name, slug });
+  } catch (error) {
+    if (error.message.includes('UNIQUE')) {
+      const existing = db.prepare('SELECT * FROM wisdom_categories WHERE name = ?').get(name);
+      return res.json(existing);
+    }
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/wisdom/follow', (req, res) => {
+  const { userId, categoryId } = req.body;
+  try {
+    const existing = db.prepare('SELECT * FROM follows WHERE user_id = ? AND category_id = ?').get(userId, categoryId);
+    if (existing) {
+      db.prepare('DELETE FROM follows WHERE user_id = ? AND category_id = ?').run(userId, categoryId);
+      res.json({ message: 'Takibi bıraktı', is_followed: false });
+    } else {
+      db.prepare('INSERT INTO follows (user_id, category_id) VALUES (?, ?)').run(userId, categoryId);
+      res.json({ message: 'Takip ediliyor', is_followed: true });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/wisdom/categories/:id', (req, res) => {
+  const { id } = req.params;
+  const adminId = req.query.adminId;
+  try {
+    const user = db.prepare('SELECT role FROM users WHERE email = ?').get(adminId);
+    if (!user || user.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Sadece adminler kategori silebilir.' });
+    }
+    db.prepare('DELETE FROM wisdom_categories WHERE id = ?').run(id);
+    res.json({ message: 'Kategori silindi' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+server.listen(PORT, () => {
+  console.log(`Gilded backend sunucusu http://localhost:${PORT} adresinde çalışıyor`);
 });

@@ -15,15 +15,49 @@ db.exec(`
     support_count INTEGER DEFAULT 0,
     is_repaired BOOLEAN DEFAULT 0,
     is_anonymous BOOLEAN DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    category_id INTEGER DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (category_id) REFERENCES wisdom_categories(id) ON DELETE SET NULL
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS wisdom_categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    slug TEXT UNIQUE NOT NULL,
+    description TEXT,
+    created_by TEXT
   )
 `);
 
 try {
+  db.exec("ALTER TABLE wisdom_categories ADD COLUMN created_by TEXT");
+} catch (e) {}
+
+// Mevcut kategorileri temizle (İstek üzerine)
+db.exec('DELETE FROM wisdom_categories');
+db.exec('DELETE FROM follows');
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS follows (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    category_id INTEGER NOT NULL,
+    UNIQUE(user_id, category_id),
+    FOREIGN KEY (category_id) REFERENCES wisdom_categories(id) ON DELETE CASCADE
+  )
+`);
+
+// Varsayılan kategorileri eklemiyoruz
+
+try {
   db.exec("ALTER TABLE posts ADD COLUMN post_type TEXT DEFAULT 'normal'");
-} catch (e) {
-  // Sütun zaten varsa hata verir, görmezden gel.
-}
+} catch (e) {}
+
+try {
+  db.exec("ALTER TABLE posts ADD COLUMN category_id INTEGER DEFAULT NULL");
+} catch (e) {}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS notifications (

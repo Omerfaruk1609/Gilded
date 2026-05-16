@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Box, TextField, IconButton, Typography, Collapse, Button, Tooltip, useTheme } from '@mui/material';
 import { Send as SendIcon } from '@mui/icons-material';
 import toast from 'react-hot-toast';
+import confetti from 'canvas-confetti';
 import { isAdminUser } from '../../services/auth';
 import '../../css/kintsugi.css';
 
@@ -155,6 +156,38 @@ const KintsugiCard = ({ id, content, image_url, post_type = 'normal', author_id,
     fetchComments();
   }, [id]);
 
+  const triggerGoldConfetti = (isMassive = false) => {
+    const scalar = isMassive ? 2 : 1;
+    const defaults = {
+      spread: 360,
+      ticks: isMassive ? 100 : 50,
+      gravity: 0.5,
+      decay: 0.94,
+      startVelocity: isMassive ? 30 : 20,
+      shapes: ['circle'],
+      colors: ['#D4AF37', '#F9E076', '#B8860B', '#FFD700', '#ffffff'],
+    };
+
+    if (isMassive) {
+      confetti({
+        ...defaults,
+        particleCount: 80,
+        scalar: 1.2,
+      });
+      confetti({
+        ...defaults,
+        particleCount: 40,
+        scalar: 0.75,
+      });
+    } else {
+      confetti({
+        ...defaults,
+        particleCount: 40,
+        scalar: 0.9,
+      });
+    }
+  };
+
   const handleStitch = async () => {
     if (hasSupported || loading) return;
     setLoading(true);
@@ -167,9 +200,18 @@ const KintsugiCard = ({ id, content, image_url, post_type = 'normal', author_id,
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
       
+      const prevCount = supportCount;
       setSupportCount(data.support_count);
       setHasSupported(true);
-      toast.success('Altın dikiş başarıyla atıldı!', { icon: '✨' });
+      
+      // Efekti tetikle
+      if (data.support_count >= 5 && prevCount < 5) {
+        triggerGoldConfetti(true); // Büyük patlama
+        toast.success('Muhteşem! Bu parça artık tamamen onarıldı.', { icon: '🏺' });
+      } else {
+        triggerGoldConfetti(false); // Normal dikiş efekti
+        toast.success('Altın dikiş başarıyla atıldı!', { icon: '✨' });
+      }
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -235,16 +277,24 @@ const KintsugiCard = ({ id, content, image_url, post_type = 'normal', author_id,
   };
 
 
+  const isWisdom = post_type === 'wisdom';
+
   return (
-    <div className={`kintsugi-card stage-${stage} ${isFullyRepaired ? 'fully-repaired' : ''}`}>
-      <svg className="crack-svg" viewBox="0 0 400 200">
-        <path className="crack-path" d="M0,50 Q100,45 150,100 T300,80 T400,120" />
-        <path className="crack-path" d="M50,0 Q60,100 20,200" />
-        <path className="crack-path" d="M350,0 Q330,80 380,200" />
-        {stage >= 3 && (
-          <path className="crack-path" d="M150,100 L200,150 L250,120" />
-        )}
-      </svg>
+    <div className={`kintsugi-card ${isWisdom ? 'wisdom-card' : `stage-${stage}`} ${isFullyRepaired && !isWisdom ? 'fully-repaired' : ''}`}>
+      {!isWisdom && (
+        <>
+          <svg className="crack-svg" viewBox="0 0 400 200">
+            <path className="crack-path" d="M0,50 Q100,45 150,100 T300,80 T400,120" />
+            <path className="crack-path" d="M50,0 Q60,100 20,200" />
+            <path className="crack-path" d="M350,0 Q330,80 380,200" />
+            {stage >= 3 && (
+              <path className="crack-path" d="M150,100 L200,150 L250,120" />
+            )}
+          </svg>
+          <div className="gold-overlay"></div>
+          <div className="gold-shimmer"></div>
+        </>
+      )}
 
       <div className="kintsugi-content">
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -279,21 +329,23 @@ const KintsugiCard = ({ id, content, image_url, post_type = 'normal', author_id,
         )}
         
         <Box sx={{ mt: 4, display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Button 
-            onClick={handleStitch}
-            disabled={hasSupported || loading}
-            sx={{ 
-              bgcolor: hasSupported ? 'rgba(212, 175, 55, 0.2)' : 'transparent',
-              border: '1px solid #D4AF37',
-              color: '#D4AF37',
-              borderRadius: '20px',
-              px: 3,
-              '&:hover': { bgcolor: 'rgba(212, 175, 55, 0.1)' },
-              '&.Mui-disabled': { color: 'rgba(212, 175, 55, 0.5)', borderColor: 'rgba(212, 175, 55, 0.2)' }
-            }}
-          >
-            {hasSupported ? '✓ Dikiş Atıldı' : 'Altınla Dik'}
-          </Button>
+          {!isWisdom && (
+            <Button 
+              onClick={handleStitch}
+              disabled={hasSupported || loading}
+              sx={{ 
+                bgcolor: hasSupported ? 'rgba(212, 175, 55, 0.2)' : 'transparent',
+                border: '1px solid #D4AF37',
+                color: '#D4AF37',
+                borderRadius: '20px',
+                px: 3,
+                '&:hover': { bgcolor: 'rgba(212, 175, 55, 0.1)' },
+                '&.Mui-disabled': { color: 'rgba(212, 175, 55, 0.5)', borderColor: 'rgba(212, 175, 55, 0.2)' }
+              }}
+            >
+              {hasSupported ? '✓ Dikiş Atıldı' : 'Altınla Dik'}
+            </Button>
+          )}
 
           <Button 
             onClick={() => {

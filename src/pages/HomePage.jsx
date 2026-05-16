@@ -58,7 +58,7 @@ function HomePage() {
         {loading ? (
           <Typography sx={{ color: '#888', textAlign: 'center' }}>Yükleniyor...</Typography>
         ) : (
-          posts.map(post => (
+          Array.isArray(posts) && posts.map(post => (
             <KintsugiCard 
               key={post.id}
               id={post.id}

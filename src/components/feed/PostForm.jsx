@@ -7,11 +7,24 @@ const PostForm = ({ onPostCreated }) => {
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [isWisdom, setIsWisdom] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
   const [image, setImage] = useState(null);
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const isBilge = isBilgeUser(getStoredUser());
+
+  React.useEffect(() => {
+    if (isBilge || isAdminUser(getStoredUser())) {
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      fetch(`http://localhost:5000/api/wisdom/categories?userId=${currentUser.email}`)
+        .then(res => res.json())
+        .then(data => setCategories(data));
+    }
+  }, [isBilge]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,11 +34,28 @@ const PostForm = ({ onPostCreated }) => {
 
     setLoading(true);
     try {
+      let finalCategoryId = selectedCategory;
+
+      // Eğer yeni kategori oluşturuluyorsa
+      if (isWisdom && isCreatingCategory && newCategoryName.trim()) {
+        const catRes = await fetch('http://localhost:5000/api/wisdom/categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: newCategoryName.trim(), userId: currentUser.email })
+        });
+        const catData = await catRes.json();
+        if (!catRes.ok) throw new Error(catData.error || 'Kategori oluşturulamadı');
+        finalCategoryId = catData.id;
+      }
+
       const formData = new FormData();
       formData.append('content', content);
       formData.append('author_id', currentUser.email);
       formData.append('post_type', isWisdom ? 'wisdom' : 'normal');
       formData.append('is_anonymous', true);
+      if (isWisdom && finalCategoryId) {
+        formData.append('category_id', finalCategoryId);
+      }
       if (image) {
         formData.append('image', image);
       }
@@ -118,16 +148,80 @@ const PostForm = ({ onPostCreated }) => {
 
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
             {isBilge && (
-              <FormControlLabel
-                control={
-                  <Checkbox 
-                    checked={isWisdom} 
-                    onChange={(e) => setIsWisdom(e.target.checked)} 
-                    sx={{ color: '#D4AF37', '&.Mui-checked': { color: '#D4AF37' } }} 
-                  />
-                }
-                label={<Typography sx={{ color: theme.palette.text.secondary, fontSize: '0.85rem' }}>Bilgelik Sözü Olarak Paylaş</Typography>}
-              />
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox 
+                      checked={isWisdom} 
+                      onChange={(e) => setIsWisdom(e.target.checked)} 
+                      sx={{ color: '#D4AF37', '&.Mui-checked': { color: '#D4AF37' } }} 
+                    />
+                  }
+                  label={<Typography sx={{ color: theme.palette.text.secondary, fontSize: '0.85rem' }}>Bilgelik Sözü Olarak Paylaş</Typography>}
+                />
+                {isWisdom && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {!isCreatingCategory ? (
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <select 
+                          value={selectedCategory} 
+                          onChange={(e) => setSelectedCategory(e.target.value)}
+                          style={{ 
+                            background: 'rgba(255,255,255,0.05)', 
+                            color: '#D4AF37', 
+                            border: '1px solid rgba(212,175,55,0.3)', 
+                            borderRadius: '4px',
+                            padding: '4px',
+                            flex: 1
+                          }}
+                        >
+                          <option value="">Kategori Seç (Opsiyonel)</option>
+                          {categories
+                            .filter(cat => isAdminUser(getStoredUser()) || cat.is_owner)
+                            .map(cat => (
+                              <option key={cat.id} value={cat.id}>
+                                {cat.name} ({cat.follower_count || 0} Takipçi)
+                              </option>
+                            ))}
+                        </select>
+                        {(isAdminUser(getStoredUser()) || isBilge) && (
+                          <Button 
+                            size="small" 
+                            onClick={() => setIsCreatingCategory(true)}
+                            sx={{ color: '#D4AF37', minWidth: 'auto', p: 0.5, fontSize: '0.7rem' }}
+                          >
+                            + Yeni
+                          </Button>
+                        )}
+                      </Box>
+                    ) : (
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <TextField
+                          size="small"
+                          placeholder="Yeni Kategori Adı"
+                          value={newCategoryName}
+                          onChange={(e) => setNewCategoryName(e.target.value)}
+                          sx={{ 
+                            '& .MuiOutlinedInput-root': { 
+                              color: '#D4AF37', 
+                              height: '32px',
+                              fontSize: '0.8rem',
+                              '& fieldset': { borderColor: 'rgba(212,175,55,0.3)' }
+                            } 
+                          }}
+                        />
+                        <Button 
+                          size="small" 
+                          onClick={() => setIsCreatingCategory(false)}
+                          sx={{ color: '#888', minWidth: 'auto', p: 0.5, fontSize: '0.7rem' }}
+                        >
+                          Vazgeç
+                        </Button>
+                      </Box>
+                    )}
+                  </Box>
+                )}
+              </Box>
             )}
             <Button 
               type="submit" 

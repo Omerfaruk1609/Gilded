@@ -8,7 +8,7 @@ function Footer() {
             <div className="footer-content">
                 <div className="footer-logo">
 
-                    <h2 className="footer-title">Kintsugi Space</h2>
+                    <h2 className="footer-title">Gilded</h2>
                 </div>
                 <div className="footer-team">
                     <h3 className="team-member">
@@ -18,7 +18,7 @@ function Footer() {
                     </h3>
                 </div>
                 <div className="footer-bottom">
-                    &copy; {new Date().getFullYear()} Kintsugi Space - Tüm Hakları Saklıdır.
+                    &copy; {new Date().getFullYear()} Gilded - Tüm Hakları Saklıdır.
                 </div>
             </div>
         </footer>

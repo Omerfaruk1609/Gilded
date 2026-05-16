@@ -47,7 +47,7 @@ function Navbar() {
                     <Box
                         component="img"
                         src="/Gildedlogo.png"
-                        alt="Kintsugi Space"
+                        alt="Gilded"
                         sx={{
                             height: 45,
                             width: 'auto'
@@ -64,8 +64,7 @@ function Navbar() {
                             WebkitTextFillColor: 'transparent',
                             fontSize: '1.1rem' // Boyut küçültüldü
                         }}
-                    >
-                    </Typography>
+                    ></Typography>
                 </Box>
 
                 {/* MENÜ BUTONLARI - Soluk Gri Tonları */}
@@ -120,7 +119,7 @@ function Navbar() {
                         >
                             Galeri
                         </Button>
-                        
+
                         <Button
                             component={RouterLink}
                             to="/wisdom"
@@ -139,7 +138,7 @@ function Navbar() {
                         </Button>
 
                         {/* PROFİL KISMI */}
-                        <Box 
+                        <Box
                             component={RouterLink}
                             to="/profile"
                             sx={{
