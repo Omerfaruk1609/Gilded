@@ -47,7 +47,7 @@ function LoginPage() {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundImage: 'url("/kintsugi_login.png")',
+          backgroundImage: 'url("/login_bg.png")',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           filter: 'brightness(0.4)',
@@ -59,7 +59,7 @@ function LoginPage() {
         <Box 
           sx={{ 
             display: 'flex', 
-            flexDirection: { xs: 'column', md: 'row' },
+            flexDirection: { xs: 'column', md: 'row-reverse' },
             alignItems: 'center',
             gap: 6
           }}

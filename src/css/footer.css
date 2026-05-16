@@ -57,3 +57,14 @@
 .team-member:hover {
     color: gold;
 }
+
+.footer-link {
+    color: inherit;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.footer-link:hover {
+    color: #ffd700;
+    text-shadow: 0 0 8px rgba(212, 175, 55, 0.4);
+}

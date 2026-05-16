@@ -47,7 +47,7 @@ function RegisterPage() {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundImage: 'url("/kintsugi_login.png")',
+          backgroundImage: 'url("/register_bg.png")',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           filter: 'brightness(0.4)',

@@ -79,7 +79,7 @@ function Navbar() {
                             to="/hall-of-fame"
                             sx={{ color: '#D4AF37', fontWeight: 600, opacity: 0.9, '&:hover': { opacity: 1, textShadow: '0 0 8px rgba(212,175,55,0.5)' } }}
                         >
-                            Galeri
+                            Onarılanlar
                         </Button>
 
                         {isAdminUser(user) && (

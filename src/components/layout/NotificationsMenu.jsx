@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { IconButton, Badge, Menu, MenuItem, Typography, Box } from '@mui/material';
-import NotificationsIcon from '@mui/icons-material/Notifications';
+import { Notifications as NotificationsIcon } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { getStoredUser } from '../../services/auth';
 
 const NotificationsMenu = () => {
   const [notifications, setNotifications] = useState([]);
   const [anchorEl, setAnchorEl] = useState(null);
   const user = getStoredUser();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (user) {
@@ -34,10 +36,14 @@ const NotificationsMenu = () => {
     setAnchorEl(null);
   };
 
-  const markAsRead = async (id) => {
+  const markAsRead = async (notif) => {
     try {
-      await fetch(`http://localhost:5000/api/notifications/${id}/read`, { method: 'PUT' });
-      setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: 1 } : n));
+      if (!notif.is_read) {
+        await fetch(`http://localhost:5000/api/notifications/${notif.id}/read`, { method: 'PUT' });
+        setNotifications(notifications.map(n => n.id === notif.id ? { ...n, is_read: 1 } : n));
+      }
+      handleClose();
+      navigate(`/post/${notif.post_id}`);
     } catch (err) {
       console.error(err);
     }
@@ -79,7 +85,7 @@ const NotificationsMenu = () => {
           notifications.map(notif => (
             <MenuItem 
               key={notif.id} 
-              onClick={() => markAsRead(notif.id)}
+              onClick={() => markAsRead(notif)}
               sx={{ 
                 opacity: notif.is_read ? 0.6 : 1,
                 bgcolor: notif.is_read ? 'transparent' : 'rgba(212, 175, 55, 0.05)',

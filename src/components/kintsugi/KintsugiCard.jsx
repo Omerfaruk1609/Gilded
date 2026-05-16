@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Box, TextField, IconButton, Typography, Collapse, Button, Tooltip, useTheme } from '@mui/material';
-import SendIcon from '@mui/icons-material/Send';
+import { Send as SendIcon } from '@mui/icons-material';
 import toast from 'react-hot-toast';
+import { isAdminUser } from '../../services/auth';
 import '../../css/kintsugi.css';
 
 const CommentItem = ({ 
@@ -13,13 +14,12 @@ const CommentItem = ({
   newComment, 
   setNewComment, 
   handleComment, 
-  handleDeleteComment, 
-  isAnonComment, 
-  setIsAnonComment 
+  handleDeleteComment,
+  isAdmin
 }) => {
   const theme = useTheme();
   const authorLabel = (comment.post_type === 'wisdom') 
-    ? (comment.author_name || comment.author_id.split('@')[0]) 
+    ? 'Bilge Bir Ruh' 
     : 'Bir Ruh';
 
   return (
@@ -42,7 +42,7 @@ const CommentItem = ({
             Cevapla
           </Button>
           
-          {(comment.author_id === currentUser.email || isAuthor) && (
+          {(comment.author_id === currentUser.email || isAuthor || isAdmin) && (
             <Button 
               className="comment-action-btn" 
               sx={{ color: '#ff4d4d !important' }}
@@ -88,8 +88,7 @@ const CommentItem = ({
             setNewComment={setNewComment}
             handleComment={handleComment}
             handleDeleteComment={handleDeleteComment}
-            isAnonComment={isAnonComment}
-            setIsAnonComment={setIsAnonComment}
+            isAdmin={isAdmin}
           />
         ))}
       </div>
@@ -109,6 +108,7 @@ const KintsugiCard = ({ id, content, image_url, post_type = 'normal', author_id,
   const [replyingTo, setReplyingTo] = useState(null);
 
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const isAdmin = isAdminUser(currentUser);
   const isAuthor = currentUser.email === author_id;
 
   const handleDeletePost = async () => {
@@ -249,12 +249,12 @@ const KintsugiCard = ({ id, content, image_url, post_type = 'normal', author_id,
       <div className="kintsugi-content">
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div className="kintsugi-author">
-            {post_type === 'wisdom' ? (author_name || author_id.split('@')[0]) : 'Bir Ruh'}
+            {post_type === 'wisdom' ? 'Bilge Bir Ruh' : 'Bir Ruh'}
             {isAuthor && <span className="author-badge">Senin Parçan</span>}
             {post_type === 'wisdom' && <span className="author-badge" style={{ background: 'rgba(212,175,55,0.2)', color: '#D4AF37' }}>Bilgelik</span>}
           </div>
           
-          {isAuthor && (
+          {(isAuthor || isAdmin) && (
             <IconButton onClick={handleDeletePost} sx={{ color: 'rgba(255,77,77,0.3)', '&:hover': { color: '#ff4d4d' } }}>
               <span style={{ fontSize: '1.2rem' }}>×</span>
             </IconButton>
@@ -355,8 +355,7 @@ const KintsugiCard = ({ id, content, image_url, post_type = 'normal', author_id,
                 setNewComment={setNewComment}
                 handleComment={handleComment}
                 handleDeleteComment={handleDeleteComment}
-                isAnonComment={isAnonComment}
-                setIsAnonComment={setIsAnonComment}
+                isAdmin={isAdmin}
               />
             ))}
           </Box>

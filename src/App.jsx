@@ -10,6 +10,7 @@ import AdminPanel from './pages/AdminPanel'
 import ProfilePage from './pages/ProfilePage'
 import HallOfFamePage from './pages/HallOfFamePage'
 import WisdomPage from './pages/WisdomPage'
+import PostDetailPage from './pages/PostDetailPage'
 
 // Guards
 import ProtectedRoute from './components/guards/ProtectedRoute'
@@ -77,6 +78,14 @@ function App() {
           element={
             <ProtectedRoute>
               <WisdomPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/post/:id"
+          element={
+            <ProtectedRoute>
+              <PostDetailPage />
             </ProtectedRoute>
           }
         />

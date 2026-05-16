@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Box, TextField, Button, Paper, Typography, useTheme, FormControlLabel, Checkbox } from '@mui/material';
 import toast from 'react-hot-toast';
-import { isAdminUser } from '../../services/auth';
+import { isAdminUser, isBilgeUser, getStoredUser } from '../../services/auth';
 
 const PostForm = ({ onPostCreated }) => {
   const [content, setContent] = useState('');
@@ -11,7 +11,7 @@ const PostForm = ({ onPostCreated }) => {
   const [image, setImage] = useState(null);
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const isAdmin = isAdminUser();
+  const isBilge = isBilgeUser(getStoredUser());
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -117,7 +117,7 @@ const PostForm = ({ onPostCreated }) => {
           </Button>
 
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            {isAdmin && (
+            {isBilge && (
               <FormControlLabel
                 control={
                   <Checkbox 

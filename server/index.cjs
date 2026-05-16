@@ -4,7 +4,7 @@ const db = require('./db.cjs');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const path = require('path');
-const { containsProfanity } = require('./utils/moderation');
+const { containsProfanity } = require('./utils/moderation.cjs');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, 'server/uploads/'),
@@ -86,6 +86,39 @@ app.get('/api/users/:email/stats', (req, res) => {
   }
 });
 
+// Tekil post getir
+app.get('/api/posts/:id', (req, res) => {
+  const { id } = req.params;
+  const userId = req.query.userId;
+  
+  try {
+    let query = `
+      SELECT p.*, u.ad as author_name 
+      FROM posts p 
+      LEFT JOIN users u ON p.author_id = u.email 
+      WHERE p.id = ?
+    `;
+    
+    if (userId) {
+      query = `
+        SELECT p.*, u.ad as author_name,
+        (SELECT COUNT(*) FROM supports s WHERE s.post_id = p.id AND s.user_id = '${userId}') as has_supported
+        FROM posts p 
+        LEFT JOIN users u ON p.author_id = u.email 
+        WHERE p.id = ?
+      `;
+    }
+    
+    const post = db.prepare(query).get(id);
+    if (!post) {
+      return res.status(404).json({ error: 'Post bulunamadı' });
+    }
+    res.json(post);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Bir postun yorumlarını getir
 app.get('/api/posts/:id/comments', (req, res) => {
   try {
@@ -113,6 +146,14 @@ app.post('/api/posts', upload.single('image'), (req, res) => {
   }
 
   try {
+    // Admin kontrolü
+    if (post_type === 'wisdom') {
+      const user = db.prepare('SELECT role FROM users WHERE email = ?').get(author_id);
+      if (!user || (user.role !== 'ADMIN' && user.role !== 'BILGE')) {
+        return res.status(403).json({ error: 'Bilgelik sözü paylaşmak için yetki gereklidir.' });
+      }
+    }
+
     const info = db.prepare('INSERT INTO posts (content, author_id, image_url, post_type, is_anonymous) VALUES (?, ?, ?, ?, ?)').run(content, author_id, image_url, post_type, 1);
     const newPost = db.prepare('SELECT * FROM posts WHERE id = ?').get(info.lastInsertRowid);
     res.status(201).json(newPost);
@@ -317,6 +358,59 @@ app.post('/api/auth/login', async (req, res) => {
     // Başarılı giriş (Basitlik için tüm kullanıcı objesini dönüyoruz, gerçek projede JWT kullanılır)
     const { password: _, ...userWithoutPassword } = user;
     res.json(userWithoutPassword);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- ADMIN ENDPOINTS ---
+
+// Admin yetkisi kontrolü için yardımcı
+const isAdmin = (email) => {
+  const user = db.prepare('SELECT role FROM users WHERE email = ?').get(email);
+  return user && user.role === 'ADMIN';
+};
+
+// İstatistikleri getir
+app.get('/api/admin/stats', (req, res) => {
+  const { admin_email } = req.query;
+  if (!isAdmin(admin_email)) return res.status(403).json({ error: 'Yetkisiz erişim' });
+
+  try {
+    const totalUsers = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
+    const totalPosts = db.prepare('SELECT COUNT(*) as count FROM posts').get().count;
+    const repairedPosts = db.prepare('SELECT COUNT(*) as count FROM posts WHERE is_repaired = 1').get().count;
+    const totalSupports = db.prepare('SELECT COUNT(*) as count FROM supports').get().count;
+
+    res.json({ totalUsers, totalPosts, repairedPosts, totalSupports });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Tüm kullanıcıları getir
+app.get('/api/admin/users', (req, res) => {
+  const { admin_email } = req.query;
+  if (!isAdmin(admin_email)) return res.status(403).json({ error: 'Yetkisiz erişim' });
+
+  try {
+    const users = db.prepare('SELECT id, email, ad, role, created_at FROM users ORDER BY created_at DESC').all();
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Kullanıcı rolünü güncelle
+app.put('/api/admin/users/:id/role', (req, res) => {
+  const { admin_email, role } = req.body;
+  const { id } = req.params;
+
+  if (!isAdmin(admin_email)) return res.status(403).json({ error: 'Yetkisiz erişim' });
+
+  try {
+    db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, id);
+    res.json({ message: 'Rol güncellendi' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -11,6 +11,10 @@ export const isAdminUser = (user) => {
     return user && user.role === 'ADMIN';
 };
 
+export const isBilgeUser = (user) => {
+    return user && (user.role === 'BILGE' || user.role === 'ADMIN');
+};
+
 export const loginUser = async (email, password) => {
     const response = await fetch('http://localhost:5000/api/auth/login', {
         method: 'POST',
