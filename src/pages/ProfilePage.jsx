@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Container, Grid, Paper, Avatar } from '@mui/material';
+import { Box, Typography, Container, Grid, Paper, Avatar, Button } from '@mui/material';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import KintsugiCard from '../components/kintsugi/KintsugiCard';
 import { API_URL } from '../services/apiConfig';
 import { getBadge } from '../services/auth';
@@ -9,33 +11,65 @@ function ProfilePage() {
   const [stats, setStats] = useState({ received: 0, given: 0 });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0); // 0: Hikayeler, 1: Yolculuk
+  const [network, setNetwork] = useState({ followers: [], following: [], is_following: false });
 
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
-  useEffect(() => {
-    const fetchProfileData = async () => {
-      try {
-        const [postsRes, statsRes] = await Promise.all([
-          fetch(`${API_URL}/users/${currentUser.email}/posts`),
-          fetch(`${API_URL}/users/${currentUser.email}/stats`)
-        ]);
-        
-        const postsData = await postsRes.json();
-        const statsData = await statsRes.json();
-        
-        setPosts(Array.isArray(postsData) ? postsData : []);
-        setStats(statsData || { received: 0, given: 0 });
-      } catch (error) {
-        console.error('Profil yükleme hatası:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const targetEmail = searchParams.get('email') || currentUser.email;
+  const isOwnProfile = targetEmail === currentUser.email;
 
-    if (currentUser.email) {
+  const fetchProfileData = async () => {
+    try {
+      const [postsRes, statsRes, networkRes] = await Promise.all([
+        fetch(`${API_URL}/users/${targetEmail}/posts`),
+        fetch(`${API_URL}/users/${targetEmail}/stats`),
+        fetch(`${API_URL}/users/${targetEmail}/network?currentUserId=${currentUser.email}`)
+      ]);
+      
+      const postsData = await postsRes.json();
+      const statsData = await statsRes.json();
+      const networkData = await networkRes.json();
+      
+      setPosts(Array.isArray(postsData) ? postsData : []);
+      setStats(statsData || { received: 0, given: 0 });
+      setNetwork(networkData || { followers: [], following: [], is_following: false });
+    } catch (error) {
+      console.error('Profil yükleme hatası:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (targetEmail) {
       fetchProfileData();
     }
-  }, [currentUser.email]);
+  }, [targetEmail]);
+
+  const handleFollowUser = async () => {
+    try {
+      const res = await fetch(`${API_URL}/users/follow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ followingEmail: targetEmail })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(data.message);
+        // Refresh network info
+        const networkRes = await fetch(`${API_URL}/users/${targetEmail}/network?currentUserId=${currentUser.email}`);
+        const networkData = await networkRes.json();
+        setNetwork(networkData);
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Takip işlemi başarısız.');
+      }
+    } catch (e) {
+      toast.error('Takip işlemi sırasında hata oluştu.');
+    }
+  };
 
   return (
     <Container maxWidth="md" sx={{ py: 6 }}>
@@ -51,10 +85,10 @@ function ProfilePage() {
             boxShadow: '0 0 20px rgba(212, 175, 55, 0.3)'
           }}
         >
-          {currentUser.email?.[0].toUpperCase()}
+          {targetEmail?.[0].toUpperCase()}
         </Avatar>
         <Typography variant="h4" sx={{ color: '#fff', fontWeight: 700, mb: 1 }}>
-          {currentUser.email?.split('@')[0]}
+          {targetEmail?.split('@')[0]}
         </Typography>
         <Typography variant="body1" sx={{ color: '#888', mb: 2 }}>
           Kırıklarını altına dönüştüren bir ruh.
@@ -67,7 +101,7 @@ function ProfilePage() {
             gap: 1, 
             px: 2, 
             py: 1, 
-            mb: 4,
+            mb: 3,
             bgcolor: 'rgba(212,175,55,0.1)', 
             borderRadius: '20px',
             border: `1px solid ${getBadge(stats).color}44`
@@ -76,6 +110,50 @@ function ProfilePage() {
             <Typography sx={{ color: getBadge(stats).color, fontWeight: 700, fontSize: '0.8rem' }}>
               {getBadge(stats).label}
             </Typography>
+          </Box>
+        )}
+
+        {/* Takipçi İstatistikleri */}
+        <Box sx={{ display: 'flex', gap: 3, mb: 3 }}>
+          <Typography sx={{ color: '#94a3b8', fontSize: '0.9rem' }}>
+            <strong style={{ color: '#fff' }}>{network.followers.length}</strong> Takipçi
+          </Typography>
+          <Typography sx={{ color: '#94a3b8', fontSize: '0.9rem' }}>
+            <strong style={{ color: '#fff' }}>{network.following.length}</strong> Takip Edilen
+          </Typography>
+        </Box>
+
+        {/* Takip Et & Mesajlaş Butonları (Kendi profili değilse) */}
+        {!isOwnProfile && (
+          <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
+            <Button
+              variant="contained"
+              onClick={handleFollowUser}
+              sx={{
+                bgcolor: network.is_following ? 'rgba(255,255,255,0.1)' : '#D4AF37',
+                color: network.is_following ? '#fff' : '#000',
+                fontWeight: 700,
+                px: 3,
+                borderRadius: '20px',
+                '&:hover': { bgcolor: network.is_following ? 'rgba(255,255,255,0.2)' : '#F9E076' }
+              }}
+            >
+              {network.is_following ? 'Takipten Çık' : 'Takip Et'}
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => navigate(`/messages?chat=${targetEmail}`)}
+              sx={{
+                borderColor: '#D4AF37',
+                color: '#D4AF37',
+                fontWeight: 700,
+                px: 3,
+                borderRadius: '20px',
+                '&:hover': { borderColor: '#F9E076', bgcolor: 'rgba(212,175,55,0.05)' }
+              }}
+            >
+              Mesaj Gönder
+            </Button>
           </Box>
         )}
 
@@ -107,7 +185,7 @@ function ProfilePage() {
               fontWeight: 600
             }}
           >
-            Hikayelerim
+            {isOwnProfile ? 'Hikayelerim' : 'Hikayeleri'}
           </Typography>
           <Typography 
             onClick={() => setActiveTab(1)}
@@ -119,7 +197,7 @@ function ProfilePage() {
               fontWeight: 600
             }}
           >
-            İyileşme Yolculuğum
+            {isOwnProfile ? 'İyileşme Yolculuğum' : 'İyileşme Yolculuğu'}
           </Typography>
         </Box>
       </Box>
@@ -146,7 +224,7 @@ function ProfilePage() {
             ))
           ) : (
             <Box sx={{ py: 10, textAlign: 'center', bgcolor: 'rgba(255,255,255,0.02)', borderRadius: 4 }}>
-              <Typography sx={{ color: '#555' }}>Henüz bir hikaye paylaşmadın.</Typography>
+              <Typography sx={{ color: '#555' }}>Henüz bir hikaye paylaşılmamış.</Typography>
             </Box>
           )
         ) : (

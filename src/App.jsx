@@ -11,6 +11,7 @@ import ProfilePage from './pages/ProfilePage'
 import HallOfFamePage from './pages/HallOfFamePage'
 import WisdomPage from './pages/WisdomPage'
 import PostDetailPage from './pages/PostDetailPage'
+import MessagesPage from './pages/MessagesPage'
 
 // Guards
 import ProtectedRoute from './components/guards/ProtectedRoute'
@@ -86,6 +87,14 @@ function App() {
           element={
             <ProtectedRoute>
               <PostDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/messages"
+          element={
+            <ProtectedRoute>
+              <MessagesPage />
             </ProtectedRoute>
           }
         />

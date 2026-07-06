@@ -9,7 +9,16 @@ export const useSocket = () => useContext(SocketContext);
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
-  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user') || 'null'));
+
+  useEffect(() => {
+    const handleAuthChange = () => {
+      setUser(JSON.parse(localStorage.getItem('user') || 'null'));
+    };
+
+    window.addEventListener('auth-change', handleAuthChange);
+    return () => window.removeEventListener('auth-change', handleAuthChange);
+  }, []);
 
   useEffect(() => {
     if (user && user.email) {
@@ -31,7 +40,12 @@ export const SocketProvider = ({ children }) => {
         });
       });
 
-      return () => newSocket.close();
+      return () => {
+        newSocket.close();
+        setSocket(null);
+      };
+    } else {
+      setSocket(null);
     }
   }, [user?.email]);
 

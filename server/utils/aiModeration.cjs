@@ -29,23 +29,18 @@ async function analyzeComment(text) {
 
   const normalizedText = text.toLowerCase().trim();
 
+  // Türkçe karakterleri de içeren kelime sınırı tanımları
+  const boundaryStart = '(?<=^|[^a-zıışğüöçA-ZİIŞĞÜÖÇ0-9])';
+  const boundaryEnd = '(?=$|[^a-zıışğüöçA-ZİIŞĞÜÖÇ0-9])';
+
   // 1. Kelime bazlı kontrol (Regex ile tam kelime eşleşmesi)
   for (const phrase of TOXIC_PHRASES) {
-    // Kelime sınırlarını (\b) kullanarak "saçma"yı bulup "saçmalamak" gibi 
-    // geçerli kelimeleri engellememeye çalışıyoruz.
-    const regex = new RegExp(`\\b${phrase}\\b`, 'i');
+    const regex = new RegExp(`${boundaryStart}${phrase}${boundaryEnd}`, 'i');
     
     if (regex.test(normalizedText)) {
       console.log(`Moderasyon: [${phrase}] kelimesi nedeniyle yorum reddedildi.`);
       return "REJECT";
     }
-  }
-
-  // 2. Basit Karakter Bazlı Kontrol (Örn: Çok fazla ünlem veya büyük harf bağırma hissi verebilir)
-  // Hackathon'da anlatmak için güzel bir detay:
-  if (text === text.toUpperCase() && text.length > 10) {
-    // Sadece büyük harfle yazılan uzun cümleler agresif algılanabilir
-    // return "REJECT"; // Bu çok katı olabilir, şimdilik kapalı.
   }
 
   return "APPROVE";

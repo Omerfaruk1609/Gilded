@@ -1,5 +1,29 @@
 import { API_URL } from './apiConfig';
 
+// Global fetch interceptor to attach JWT token to all API calls
+const originalFetch = window.fetch;
+window.fetch = async (url, options = {}) => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+        try {
+            const user = JSON.parse(userStr);
+            if (user && user.token) {
+                options.headers = {
+                    ...options.headers,
+                    'Authorization': `Bearer ${user.token}`
+                };
+            }
+        } catch (e) {
+            console.error('Failed to parse user for auth header', e);
+        }
+    }
+    return originalFetch(url, options);
+};
+
+const triggerAuthChange = () => {
+    window.dispatchEvent(new Event('auth-change'));
+};
+
 export const getStoredUser = () => {
     const user = localStorage.getItem('user');
     return user ? JSON.parse(user) : null;
@@ -7,6 +31,7 @@ export const getStoredUser = () => {
 
 export const clearStoredUser = () => {
     localStorage.removeItem('user');
+    triggerAuthChange();
 };
 
 export const isAdminUser = (user) => {
@@ -26,6 +51,7 @@ export const loginUser = async (email, password) => {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Giriş yapılamadı');
     localStorage.setItem('user', JSON.stringify(data));
+    triggerAuthChange();
     return data;
 };
 
@@ -41,7 +67,6 @@ export const registerUser = async (email, password, ad) => {
 };
 
 export const logoutUser = async () => {
-    // Backend logout logic would go here
     return Promise.resolve();
 };
 

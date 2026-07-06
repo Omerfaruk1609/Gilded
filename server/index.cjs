@@ -7,8 +7,11 @@ const db = require('./db.cjs');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const path = require('path');
+const jwt = require('jsonwebtoken');
 const { containsProfanity } = require('./utils/moderation.cjs');
 const { analyzeComment } = require('./utils/aiModeration.cjs');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'gilded-secret-key-123';
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, 'server/uploads/'),
@@ -44,56 +47,102 @@ io.on('connection', (socket) => {
   });
 });
 
+// --- AUTH MIDDLEWARES ---
+
+const requireAuth = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Yetkilendirme başlığı eksik veya geçersiz' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded; // Contains id, email, role
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: 'Oturum geçersiz veya süresi dolmuş' });
+  }
+};
+
+const requireAdmin = (req, res, next) => {
+  if (req.user && req.user.role === 'ADMIN') {
+    next();
+  } else {
+    res.status(403).json({ error: 'Bu işlem için yönetici yetkisi gerekiyor.' });
+  }
+};
+
+// --- API ENDPOINTS ---
+
 // Tüm postları getir
-app.get('/api/posts', (req, res) => {
+app.get('/api/posts', async (req, res) => {
   const userId = req.query.userId;
   try {
     const postType = req.query.postType || 'normal'; // Varsayılan: normal postlar
-    let posts;
-    const isRepairedFilter = req.query.repaired === 'true' ? 'AND p.is_repaired = 1' : '';
+    let postsResult;
+    const isRepairedFilter = req.query.repaired === 'true' ? 'AND p.is_repaired = TRUE' : '';
 
     if (userId) {
-      let query = `
-        SELECT p.*, u.ad as author_name, u.role as author_role, c.name as category_name,
-        (SELECT COUNT(*) FROM supports s WHERE s.post_id = p.id AND s.user_id = ?) as has_supported
-        FROM posts p 
-        LEFT JOIN users u ON p.author_id = u.email
-        LEFT JOIN wisdom_categories c ON p.category_id = c.id
-        WHERE p.post_type = ?
-        ${isRepairedFilter}
-      `;
-
       if (postType === 'wisdom') {
         if (req.query.categoryId) {
-          // Belirli bir kategori seçildiyse: Takip kontrolü
-          query += ` AND p.category_id = ${req.query.categoryId} AND EXISTS (SELECT 1 FROM follows f WHERE f.category_id = p.category_id AND f.user_id = ?)`;
-          posts = db.prepare(query).all(userId, postType, userId);
+          const query = `
+            SELECT p.*, u.ad as author_name, u.role as author_role, c.name as category_name,
+            (SELECT COUNT(*)::int FROM supports s WHERE s.post_id = p.id AND s.user_id = $1) as has_supported
+            FROM posts p 
+            LEFT JOIN users u ON p.author_id = u.email
+            LEFT JOIN wisdom_categories c ON p.category_id = c.id
+            WHERE p.post_type = $2
+            ${isRepairedFilter}
+            AND p.category_id = $3
+            AND EXISTS (SELECT 1 FROM follows f WHERE f.category_id = p.category_id AND f.user_id = $4)
+          `;
+          postsResult = await db.query(query, [userId, postType, req.query.categoryId, userId]);
         } else {
-          // Genel Bilgelik Panosu: Sadece takip edilen tüm kategoriler
-          query += ` AND EXISTS (SELECT 1 FROM follows f WHERE f.category_id = p.category_id AND f.user_id = ?)`;
-          posts = db.prepare(query).all(userId, postType, userId);
+          const query = `
+            SELECT p.*, u.ad as author_name, u.role as author_role, c.name as category_name,
+            (SELECT COUNT(*)::int FROM supports s WHERE s.post_id = p.id AND s.user_id = $1) as has_supported
+            FROM posts p 
+            LEFT JOIN users u ON p.author_id = u.email
+            LEFT JOIN wisdom_categories c ON p.category_id = c.id
+            WHERE p.post_type = $2
+            ${isRepairedFilter}
+            AND EXISTS (SELECT 1 FROM follows f WHERE f.category_id = p.category_id AND f.user_id = $3)
+          `;
+          postsResult = await db.query(query, [userId, postType, userId]);
         }
       } else {
-        // Normal postlar
-        posts = db.prepare(query).all(userId, postType);
+        const query = `
+          SELECT p.*, u.ad as author_name, u.role as author_role, c.name as category_name,
+          (SELECT COUNT(*)::int FROM supports s WHERE s.post_id = p.id AND s.user_id = $1) as has_supported
+          FROM posts p 
+          LEFT JOIN users u ON p.author_id = u.email
+          LEFT JOIN wisdom_categories c ON p.category_id = c.id
+          WHERE p.post_type = $2
+          ${isRepairedFilter}
+        `;
+        postsResult = await db.query(query, [userId, postType]);
       }
     } else {
-      // Misafirler (Eğer varsa) sadece normal postları görsün, bilgelik gizli
+      // Misafirler sadece normal postları görsün, bilgelik gizli
       if (postType === 'wisdom') {
-        posts = [];
+        postsResult = { rows: [] };
       } else {
         const query = `
-          SELECT p.*, u.ad as author_name, u.role as author_role, c.name as category_name
+          SELECT p.*, u.ad as author_name, u.role as author_role, c.name as category_name,
+          0 as has_supported
           FROM posts p 
           LEFT JOIN users u ON p.author_id = u.email 
           LEFT JOIN wisdom_categories c ON p.category_id = c.id
           WHERE p.post_type = 'normal'
           ${isRepairedFilter}
         `;
-        posts = db.prepare(query).all();
+        postsResult = await db.query(query);
       }
     }
     
+    const posts = postsResult.rows;
+
     // Hacker News / Reddit benzeri Sıcaklık Algoritması
     posts.sort((a, b) => {
       const hoursA = (Date.now() - new Date(a.created_at).getTime()) / (1000 * 60 * 60);
@@ -110,31 +159,31 @@ app.get('/api/posts', (req, res) => {
 });
 
 // Kullanıcının kendi postlarını getir
-app.get('/api/users/:email/posts', (req, res) => {
+app.get('/api/users/:email/posts', async (req, res) => {
   const { email } = req.params;
   try {
-    const posts = db.prepare(`
+    const result = await db.query(`
       SELECT p.*, u.ad as author_name, u.role as author_role 
       FROM posts p 
       LEFT JOIN users u ON p.author_id = u.email 
-      WHERE p.author_id = ? 
+      WHERE p.author_id = $1 
       ORDER BY p.created_at DESC
-    `).all(email);
-    res.json(posts);
+    `, [email]);
+    res.json(result.rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
 // Kullanıcı istatistiklerini getir
-app.get('/api/users/:email/stats', (req, res) => {
+app.get('/api/users/:email/stats', async (req, res) => {
   const { email } = req.params;
   try {
-    const totalReceived = db.prepare('SELECT SUM(support_count) as total FROM posts WHERE author_id = ?').get(email);
-    const totalGiven = db.prepare('SELECT COUNT(*) as total FROM supports WHERE user_id = ?').get(email);
+    const totalReceived = await db.query('SELECT SUM(support_count)::int as total FROM posts WHERE author_id = $1', [email]);
+    const totalGiven = await db.query('SELECT COUNT(*)::int as total FROM supports WHERE user_id = $1', [email]);
     res.json({
-      received: totalReceived.total || 0,
-      given: totalGiven.total || 0
+      received: totalReceived.rows[0]?.total || 0,
+      given: totalGiven.rows[0]?.total || 0
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -142,59 +191,61 @@ app.get('/api/users/:email/stats', (req, res) => {
 });
 
 // Tekil post getir
-app.get('/api/posts/:id', (req, res) => {
+app.get('/api/posts/:id', async (req, res) => {
   const { id } = req.params;
   const userId = req.query.userId;
   
   try {
-    let query = `
-      SELECT p.*, u.ad as author_name, u.role as author_role
-      FROM posts p 
-      LEFT JOIN users u ON p.author_id = u.email 
-      WHERE p.id = ?
-    `;
-    
+    let result;
     if (userId) {
-      query = `
+      const query = `
         SELECT p.*, u.ad as author_name, u.role as author_role,
-        (SELECT COUNT(*) FROM supports s WHERE s.post_id = p.id AND s.user_id = ?) as has_supported
+        (SELECT COUNT(*)::int FROM supports s WHERE s.post_id = p.id AND s.user_id = $1) as has_supported
         FROM posts p 
         LEFT JOIN users u ON p.author_id = u.email 
-        WHERE p.id = ?
+        WHERE p.id = $2
       `;
-      const post = db.prepare(query).get(userId, id);
-      if (!post) return res.status(404).json({ error: 'Post bulunamadı' });
-      res.json(post);
+      result = await db.query(query, [userId, id]);
     } else {
-      const post = db.prepare(query).get(id);
-      if (!post) return res.status(404).json({ error: 'Post bulunamadı' });
-      res.json(post);
+      const query = `
+        SELECT p.*, u.ad as author_name, u.role as author_role
+        FROM posts p 
+        LEFT JOIN users u ON p.author_id = u.email 
+        WHERE p.id = $1
+      `;
+      result = await db.query(query, [id]);
     }
-    return; // Stop here to avoid double res.json below
+    const post = result.rows[0];
+    if (!post) return res.status(404).json({ error: 'Post bulunamadı' });
+    res.json(post);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
 // Bir postun yorumlarını getir
-app.get('/api/posts/:id/comments', (req, res) => {
+app.get('/api/posts/:id/comments', async (req, res) => {
+  const userId = req.query.userId || null;
   try {
-    const comments = db.prepare(`
-      SELECT c.*, u.ad as author_name 
+    const query = `
+      SELECT c.*, u.ad as author_name,
+      (SELECT vote_type FROM comment_votes v WHERE v.comment_id = c.id AND v.user_id = $2) as user_vote
       FROM comments c 
       LEFT JOIN users u ON c.author_id = u.email 
-      WHERE c.post_id = ? 
+      WHERE c.post_id = $1 
       ORDER BY c.created_at ASC
-    `).all(req.params.id);
-    res.json(comments);
+    `;
+    const result = await db.query(query, [req.params.id, userId]);
+    res.json(result.rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
 // Yeni post ekle
-app.post('/api/posts', upload.single('image'), (req, res) => {
-  const { content, author_id, post_type = 'normal', category_id = null, is_anonymous = 1, mood = null } = req.body;
+app.post('/api/posts', requireAuth, upload.single('image'), async (req, res) => {
+  const { content, post_type = 'normal', category_id = null, is_anonymous = 1, mood = null } = req.body;
+  const author_id = req.user.email; // JWT'den alınan kimlik
   const image_url = req.file ? `/uploads/${req.file.filename}` : null;
   if (!content) return res.status(400).json({ error: 'İçerik gerekli' });
 
@@ -204,54 +255,64 @@ app.post('/api/posts', upload.single('image'), (req, res) => {
 
   try {
     // Yetki Kontrolü
-    const user = db.prepare('SELECT role FROM users WHERE email = ?').get(author_id);
+    const userRes = await db.query('SELECT role FROM users WHERE email = $1', [author_id]);
+    const user = userRes.rows[0];
+    if (!user) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+
     if (post_type === 'wisdom' && user.role !== 'ADMIN' && user.role !== 'BILGE') {
       return res.status(403).json({ error: 'Bilgelik sözü paylaşma yetkiniz yok.' });
     }
 
     // Bilge ise sadece kendisinin açtığı kategorilere atabilir
     if (post_type === 'wisdom' && user.role === 'BILGE' && category_id) {
-      const category = db.prepare('SELECT created_by FROM wisdom_categories WHERE id = ?').get(category_id);
+      const catRes = await db.query('SELECT created_by FROM wisdom_categories WHERE id = $1', [category_id]);
+      const category = catRes.rows[0];
       if (!category || category.created_by !== author_id) {
         return res.status(403).json({ error: 'Sadece kendi oluşturduğunuz kategorilerde paylaşım yapabilirsiniz.' });
       }
     }
 
-    const info = db.prepare('INSERT INTO posts (content, author_id, image_url, post_type, is_anonymous, category_id, mood) VALUES (?, ?, ?, ?, ?, ?, ?)').run(content, author_id, image_url, post_type, is_anonymous, category_id, mood);
-    const newPost = db.prepare('SELECT * FROM posts WHERE id = ?').get(info.lastInsertRowid);
-    res.status(201).json(newPost);
+    const isAnonBool = (is_anonymous === '1' || is_anonymous === 1 || is_anonymous === 'true' || is_anonymous === true);
+    const insertQuery = `
+      INSERT INTO posts (content, author_id, image_url, post_type, is_anonymous, category_id, mood) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7) 
+      RETURNING *
+    `;
+    const insertRes = await db.query(insertQuery, [content, author_id, image_url, post_type, isAnonBool, category_id ? parseInt(category_id) : null, mood]);
+    res.status(201).json(insertRes.rows[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
 // Dikiş At (Destekle) - Her kullanıcı bir kez atabilir
-app.post('/api/posts/:id/support', (req, res) => {
+app.post('/api/posts/:id/support', requireAuth, async (req, res) => {
   const { id } = req.params;
-  const { user_id } = req.body;
+  const user_id = req.user.email; // JWT'den alınan kimlik
 
   try {
     // Önce dikiş atmış mı kontrol et
-    const existing = db.prepare('SELECT * FROM supports WHERE post_id = ? AND user_id = ?').get(id, user_id);
-    if (existing) return res.status(400).json({ error: 'Zaten dikiş attınız' });
+    const existing = await db.query('SELECT * FROM supports WHERE post_id = $1 AND user_id = $2', [id, user_id]);
+    if (existing.rows[0]) return res.status(400).json({ error: 'Zaten dikiş attınız' });
 
     // Dikişi kaydet
-    db.prepare('INSERT INTO supports (post_id, user_id) VALUES (?, ?)').run(id, user_id);
+    await db.query('INSERT INTO supports (post_id, user_id) VALUES ($1, $2)', [id, user_id]);
 
     // Postun destek sayısını artır
-    const post = db.prepare('SELECT * FROM posts WHERE id = ?').get(id);
+    const postRes = await db.query('SELECT * FROM posts WHERE id = $1', [id]);
+    const post = postRes.rows[0];
+    if (!post) return res.status(404).json({ error: 'Post bulunamadı' });
+
     const newSupportCount = post.support_count + 1;
-    const isRepaired = newSupportCount >= 5 ? 1 : 0;
+    const isRepaired = newSupportCount >= 5;
 
-    db.prepare('UPDATE posts SET support_count = ?, is_repaired = ? WHERE id = ?')
-      .run(newSupportCount, isRepaired, id);
+    await db.query('UPDATE posts SET support_count = $1, is_repaired = $2 WHERE id = $3', [newSupportCount, isRepaired, id]);
 
-    const updatedPost = db.prepare('SELECT p.*, 1 as has_supported FROM posts p WHERE id = ?').get(id);
+    const updatedPostRes = await db.query('SELECT p.*, 1 as has_supported FROM posts p WHERE id = $1', [id]);
 
     // Bildirim oluştur (Eğer post sahibi kendi postuna destek atmadıysa)
     if (post.author_id !== user_id) {
-      db.prepare('INSERT INTO notifications (user_id, type, post_id) VALUES (?, ?, ?)')
-        .run(post.author_id, 'support', id);
+      await db.query('INSERT INTO notifications (user_id, type, post_id) VALUES ($1, $2, $3)', [post.author_id, 'support', id]);
       
       // Real-time bildirim gönder
       io.to(post.author_id).emit('new_notification', {
@@ -262,16 +323,17 @@ app.post('/api/posts/:id/support', (req, res) => {
       });
     }
 
-    res.json(updatedPost);
+    res.json(updatedPostRes.rows[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
 // Yorum At
-app.post('/api/posts/:id/comments', async (req, res) => {
+app.post('/api/posts/:id/comments', requireAuth, async (req, res) => {
   const { id } = req.params;
-  const { content, author_id } = req.body;
+  const { content } = req.body;
+  const author_id = req.user.email; // JWT'den alınan kimlik
   
   if (!content) return res.status(400).json({ error: 'Mesaj içeriği gerekli' });
   
@@ -289,16 +351,20 @@ app.post('/api/posts/:id/comments', async (req, res) => {
     }
 
     const parentId = req.body.parent_id || null;
-    db.prepare('INSERT INTO comments (post_id, content, author_id, parent_id, is_anonymous) VALUES (?, ?, ?, ?, ?)')
-      .run(id, content, author_id, parentId, 1);
+    await db.query(
+      'INSERT INTO comments (post_id, content, author_id, parent_id, is_anonymous) VALUES ($1, $2, $3, $4, $5)',
+      [id, content, author_id, parentId, true]
+    );
     
     // Bildirim oluştur
-    const post = db.prepare('SELECT author_id FROM posts WHERE id = ?').get(id);
+    const postRes = await db.query('SELECT author_id FROM posts WHERE id = $1', [id]);
+    const post = postRes.rows[0];
+
     if (parentId) {
-      const parentComment = db.prepare('SELECT author_id FROM comments WHERE id = ?').get(parentId);
+      const parentCommentRes = await db.query('SELECT author_id FROM comments WHERE id = $1', [parentId]);
+      const parentComment = parentCommentRes.rows[0];
       if (parentComment && parentComment.author_id !== author_id) {
-        db.prepare('INSERT INTO notifications (user_id, type, post_id) VALUES (?, ?, ?)')
-          .run(parentComment.author_id, 'comment_reply', id);
+        await db.query('INSERT INTO notifications (user_id, type, post_id) VALUES ($1, $2, $3)', [parentComment.author_id, 'comment_reply', id]);
         
         io.to(parentComment.author_id).emit('new_notification', {
           type: 'comment_reply',
@@ -308,8 +374,7 @@ app.post('/api/posts/:id/comments', async (req, res) => {
         });
       }
     } else if (post && post.author_id !== author_id) {
-      db.prepare('INSERT INTO notifications (user_id, type, post_id) VALUES (?, ?, ?)')
-        .run(post.author_id, 'post_comment', id);
+      await db.query('INSERT INTO notifications (user_id, type, post_id) VALUES ($1, $2, $3)', [post.author_id, 'post_comment', id]);
       
       io.to(post.author_id).emit('new_notification', {
         type: 'post_comment',
@@ -320,37 +385,46 @@ app.post('/api/posts/:id/comments', async (req, res) => {
     }
     
     // Güncel ve isimli listeyi çek
-    const allComments = db.prepare(`
-      SELECT c.*, u.ad as author_name 
+    const allCommentsRes = await db.query(`
+      SELECT c.*, u.ad as author_name,
+      (SELECT vote_type FROM comment_votes v WHERE v.comment_id = c.id AND v.user_id = $2) as user_vote
       FROM comments c 
       LEFT JOIN users u ON c.author_id = u.email 
-      WHERE c.post_id = ? 
+      WHERE c.post_id = $1 
       ORDER BY c.created_at ASC
-    `).all(id);
+    `, [id, author_id]);
     
-    res.json(allComments);
+    res.json(allCommentsRes.rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
 // Altın Yaprak Ver (Teşekkür)
-app.post('/api/comments/:id/gold-leaf', (req, res) => {
+app.post('/api/comments/:id/gold-leaf', requireAuth, async (req, res) => {
   const { id } = req.params;
   try {
-    db.prepare('UPDATE comments SET gold_leaves = gold_leaves + 1 WHERE id = ?').run(id);
-    const comment = db.prepare('SELECT * FROM comments WHERE id = ?').get(id);
-    res.json(comment);
+    await db.query('UPDATE comments SET gold_leaves = gold_leaves + 1 WHERE id = $1', [id]);
+    const commentRes = await db.query('SELECT * FROM comments WHERE id = $1', [id]);
+    res.json(commentRes.rows[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
 // Post Sil
-app.delete('/api/posts/:id', (req, res) => {
+app.delete('/api/posts/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   try {
-    db.prepare('DELETE FROM posts WHERE id = ?').run(id);
+    const postRes = await db.query('SELECT author_id FROM posts WHERE id = $1', [id]);
+    const post = postRes.rows[0];
+    if (!post) return res.status(404).json({ error: 'Post bulunamadı' });
+
+    if (post.author_id !== req.user.email && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Bu postu silme yetkiniz yok.' });
+    }
+
+    await db.query('DELETE FROM posts WHERE id = $1', [id]);
     res.json({ message: 'Post silindi' });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -358,11 +432,23 @@ app.delete('/api/posts/:id', (req, res) => {
 });
 
 // Yorum Sil
-app.delete('/api/comments/:id', (req, res) => {
+app.delete('/api/comments/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   try {
-    // Yorumu sil (Cascade silme sayesinde alt yorumlar da silinebilir veya NULL kalır)
-    db.prepare('DELETE FROM comments WHERE id = ?').run(id);
+    const commentRes = await db.query(`
+      SELECT c.author_id, p.author_id as post_author_id 
+      FROM comments c 
+      JOIN posts p ON c.post_id = p.id 
+      WHERE c.id = $1
+    `, [id]);
+    const comment = commentRes.rows[0];
+    if (!comment) return res.status(404).json({ error: 'Yorum bulunamadı' });
+
+    if (comment.author_id !== req.user.email && comment.post_author_id !== req.user.email && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Bu yorumu silme yetkiniz yok.' });
+    }
+
+    await db.query('DELETE FROM comments WHERE id = $1', [id]);
     res.json({ message: 'Yorum silindi' });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -370,18 +456,54 @@ app.delete('/api/comments/:id', (req, res) => {
 });
 
 // Yorum Puanla (Vote)
-app.post('/api/comments/:id/vote', (req, res) => {
+app.post('/api/comments/:id/vote', requireAuth, async (req, res) => {
   const { id } = req.params;
   const { type } = req.body; // 'up' veya 'down'
-  
+  const userId = req.user.email;
+
+  if (type !== 'up' && type !== 'down') {
+    return res.status(400).json({ error: 'Geçersiz oy tipi.' });
+  }
+
   try {
-    const change = type === 'up' ? 1 : -1;
-    db.prepare('UPDATE comments SET score = score + ? WHERE id = ?').run(change, id);
+    const existingRes = await db.query('SELECT * FROM comment_votes WHERE comment_id = $1 AND user_id = $2', [id, userId]);
+    const existing = existingRes.rows[0];
+
+    let scoreChange = 0;
+
+    if (existing) {
+      if (existing.vote_type === type) {
+        // Geri çekme
+        await db.query('DELETE FROM comment_votes WHERE comment_id = $1 AND user_id = $2', [id, userId]);
+        scoreChange = type === 'up' ? -1 : 1;
+      } else {
+        // Yön değiştirme
+        await db.query('UPDATE comment_votes SET vote_type = $1 WHERE comment_id = $2 AND user_id = $3', [type, id, userId]);
+        scoreChange = type === 'up' ? 2 : -2;
+      }
+    } else {
+      // Yeni oy
+      await db.query('INSERT INTO comment_votes (comment_id, user_id, vote_type) VALUES ($1, $2, $3)', [id, userId, type]);
+      scoreChange = type === 'up' ? 1 : -1;
+    }
+
+    // Skoru güncelle
+    await db.query('UPDATE comments SET score = score + $1 WHERE id = $2', [scoreChange, id]);
     
-    // Güncel post ID'sini bulup tüm yorumları geri dön
-    const comment = db.prepare('SELECT post_id FROM comments WHERE id = ?').get(id);
-    const allComments = db.prepare('SELECT * FROM comments WHERE post_id = ? ORDER BY score DESC, created_at ASC').all(comment.post_id);
-    res.json(allComments);
+    const commentRes = await db.query('SELECT post_id FROM comments WHERE id = $1', [id]);
+    const comment = commentRes.rows[0];
+    if (!comment) return res.status(404).json({ error: 'Yorum bulunamadı' });
+
+    const allCommentsRes = await db.query(`
+      SELECT c.*, u.ad as author_name,
+      (SELECT vote_type FROM comment_votes v WHERE v.comment_id = c.id AND v.user_id = $2) as user_vote
+      FROM comments c 
+      LEFT JOIN users u ON c.author_id = u.email 
+      WHERE c.post_id = $1 
+      ORDER BY c.created_at ASC
+    `, [comment.post_id, userId]);
+
+    res.json(allCommentsRes.rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -390,28 +512,32 @@ app.post('/api/comments/:id/vote', (req, res) => {
 // --- BİLDİRİMLER ---
 
 // Kullanıcının bildirimlerini getir
-app.get('/api/notifications/:email', (req, res) => {
+app.get('/api/notifications/:email', requireAuth, async (req, res) => {
   const { email } = req.params;
+  if (email !== req.user.email) {
+    return res.status(403).json({ error: 'Yetkisiz erişim' });
+  }
+
   try {
-    const notifications = db.prepare(`
+    const notificationsRes = await db.query(`
       SELECT n.*, p.content as post_content 
       FROM notifications n 
       LEFT JOIN posts p ON n.post_id = p.id 
-      WHERE n.user_id = ? 
+      WHERE n.user_id = $1 
       ORDER BY n.created_at DESC 
       LIMIT 20
-    `).all(email);
-    res.json(notifications);
+    `, [email]);
+    res.json(notificationsRes.rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
 // Bildirimi okundu olarak işaretle
-app.put('/api/notifications/:id/read', (req, res) => {
+app.put('/api/notifications/:id/read', requireAuth, async (req, res) => {
   const { id } = req.params;
   try {
-    db.prepare('UPDATE notifications SET is_read = 1 WHERE id = ?').run(id);
+    await db.query('UPDATE notifications SET is_read = TRUE WHERE id = $1', [id]);
     res.json({ message: 'Okundu' });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -429,15 +555,14 @@ app.post('/api/auth/register', async (req, res) => {
 
   try {
     // Kullanıcı var mı kontrol et
-    const existing = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
-    if (existing) return res.status(400).json({ error: 'Bu e-posta zaten kullanımda' });
+    const existingRes = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (existingRes.rows[0]) return res.status(400).json({ error: 'Bu e-posta zaten kullanımda' });
 
     // Şifreyi hashle
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Kaydet
-    db.prepare('INSERT INTO users (email, password, ad) VALUES (?, ?, ?)')
-      .run(email, hashedPassword, ad);
+    await db.query('INSERT INTO users (email, password, ad) VALUES ($1, $2, $3)', [email, hashedPassword, ad]);
 
     res.status(201).json({ message: 'Kayıt başarılı' });
   } catch (error) {
@@ -453,16 +578,22 @@ app.post('/api/auth/login', async (req, res) => {
   }
 
   try {
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    const userRes = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = userRes.rows[0];
     if (!user) return res.status(400).json({ error: 'Hatalı e-posta veya şifre' });
 
     // Şifreyi kontrol et
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ error: 'Hatalı e-posta veya şifre' });
 
-    // Başarılı giriş (Basitlik için tüm kullanıcı objesini dönüyoruz, gerçek projede JWT kullanılır)
     const { password: _, ...userWithoutPassword } = user;
-    res.json(userWithoutPassword);
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({ ...userWithoutPassword, token });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -470,51 +601,42 @@ app.post('/api/auth/login', async (req, res) => {
 
 // --- ADMIN ENDPOINTS ---
 
-// Admin yetkisi kontrolü için yardımcı
-const isAdmin = (email) => {
-  const user = db.prepare('SELECT role FROM users WHERE email = ?').get(email);
-  return user && user.role === 'ADMIN';
-};
-
 // İstatistikleri getir
-app.get('/api/admin/stats', (req, res) => {
-  const { admin_email } = req.query;
-  if (!isAdmin(admin_email)) return res.status(403).json({ error: 'Yetkisiz erişim' });
-
+app.get('/api/admin/stats', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const totalUsers = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
-    const totalPosts = db.prepare('SELECT COUNT(*) as count FROM posts').get().count;
-    const repairedPosts = db.prepare('SELECT COUNT(*) as count FROM posts WHERE is_repaired = 1').get().count;
-    const totalSupports = db.prepare('SELECT COUNT(*) as count FROM supports').get().count;
+    const totalUsers = await db.query('SELECT COUNT(*)::int as count FROM users');
+    const totalPosts = await db.query('SELECT COUNT(*)::int as count FROM posts');
+    const repairedPosts = await db.query('SELECT COUNT(*)::int as count FROM posts WHERE is_repaired = TRUE');
+    const totalSupports = await db.query('SELECT COUNT(*)::int as count FROM supports');
 
-    res.json({ totalUsers, totalPosts, repairedPosts, totalSupports });
+    res.json({ 
+      totalUsers: totalUsers.rows[0].count, 
+      totalPosts: totalPosts.rows[0].count, 
+      repairedPosts: repairedPosts.rows[0].count, 
+      totalSupports: totalSupports.rows[0].count 
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
 // Tüm kullanıcıları getir
-app.get('/api/admin/users', (req, res) => {
-  const { admin_email } = req.query;
-  if (!isAdmin(admin_email)) return res.status(403).json({ error: 'Yetkisiz erişim' });
-
+app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const users = db.prepare('SELECT id, email, ad, role, created_at FROM users ORDER BY created_at DESC').all();
-    res.json(users);
+    const users = await db.query('SELECT id, email, ad, role, created_at FROM users ORDER BY created_at DESC');
+    res.json(users.rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
 // Kullanıcı rolünü güncelle
-app.put('/api/admin/users/:id/role', (req, res) => {
-  const { admin_email, role } = req.body;
+app.put('/api/admin/users/:id/role', requireAuth, requireAdmin, async (req, res) => {
+  const { role } = req.body;
   const { id } = req.params;
 
-  if (!isAdmin(admin_email)) return res.status(403).json({ error: 'Yetkisiz erişim' });
-
   try {
-    db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, id);
+    await db.query('UPDATE users SET role = $1 WHERE id = $2', [role, id]);
     res.json({ message: 'Rol güncellendi' });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -523,27 +645,26 @@ app.put('/api/admin/users/:id/role', (req, res) => {
 
 // --- WISDOM CATEGORIES ---
 
-app.get('/api/wisdom/categories', (req, res) => {
+app.get('/api/wisdom/categories', async (req, res) => {
   try {
     const userId = req.query.userId;
     let categories;
     if (userId) {
-      const user = db.prepare('SELECT role FROM users WHERE email = ?').get(userId);
-      // Tüm kullanıcılar (Admin, Bilge, Üye) tüm kategorileri görmeli 
-      // ama Bilge sadece kendi açtığına post atabilmeli.
-      categories = db.prepare(`
+      const result = await db.query(`
         SELECT c.*, 
-        (SELECT COUNT(*) FROM follows f WHERE f.category_id = c.id AND f.user_id = ?) as is_followed,
-        (SELECT COUNT(*) FROM follows f WHERE f.category_id = c.id) as follower_count,
-        CASE WHEN c.created_by = ? THEN 1 ELSE 0 END as is_owner
+        (SELECT COUNT(*)::int FROM follows f WHERE f.category_id = c.id AND f.user_id = $1) as is_followed,
+        (SELECT COUNT(*)::int FROM follows f WHERE f.category_id = c.id) as follower_count,
+        CASE WHEN c.created_by = $2 THEN 1 ELSE 0 END as is_owner
         FROM wisdom_categories c
-      `).all(userId, userId);
+      `, [userId, userId]);
+      categories = result.rows;
     } else {
-      categories = db.prepare(`
+      const result = await db.query(`
         SELECT c.*, 
-        (SELECT COUNT(*) FROM follows f WHERE f.category_id = c.id) as follower_count
+        (SELECT COUNT(*)::int FROM follows f WHERE f.category_id = c.id) as follower_count
         FROM wisdom_categories c
-      `).all();
+      `);
+      categories = result.rows;
     }
     res.json(categories);
   } catch (error) {
@@ -551,31 +672,57 @@ app.get('/api/wisdom/categories', (req, res) => {
   }
 });
 
-app.post('/api/wisdom/categories', (req, res) => {
-  const { name, userId } = req.body;
+app.post('/api/wisdom/categories', requireAuth, async (req, res) => {
+  const { name } = req.body;
+  const userId = req.user.email; // JWT'den alınan email
   if (!name) return res.status(400).json({ error: 'Kategori adı gerekli' });
   const slug = name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
   try {
-    const info = db.prepare('INSERT INTO wisdom_categories (name, slug, created_by) VALUES (?, ?, ?)').run(name, slug, userId);
-    res.status(201).json({ id: info.lastInsertRowid, name, slug });
+    // Yetki Kontrolü: Admin değilse toplam kullanıcı sayısı kadar pozitif yorum skoru gerekiyor
+    const userRes = await db.query('SELECT role FROM users WHERE email = $1', [userId]);
+    const user = userRes.rows[0];
+    if (!user) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+
+    if (user.role !== 'ADMIN') {
+      const totalUsersRes = await db.query('SELECT COUNT(*)::int as count FROM users');
+      const totalUsers = totalUsersRes.rows[0].count;
+
+      const userScoreRes = await db.query('SELECT COALESCE(SUM(score), 0)::int as score FROM comments WHERE author_id = $1', [userId]);
+      const userScore = userScoreRes.rows[0].score;
+
+      if (userScore < totalUsers) {
+        return res.status(403).json({ 
+          error: `Bilgelik kategorisi açabilmek için en az toplam kullanıcı sayısı kadar (${totalUsers}) yorum beğenisi (skoru) toplamanız gerekmektedir. Mevcut skorunuz: ${userScore}` 
+        });
+      }
+
+      // Koşulu sağlıyorsa ve 'user' rolündeyse 'BILGE' yapalım
+      if (user.role === 'user') {
+        await db.query("UPDATE users SET role = 'BILGE' WHERE email = $1", [userId]);
+      }
+    }
+
+    const info = await db.query('INSERT INTO wisdom_categories (name, slug, created_by) VALUES ($1, $2, $3) RETURNING *', [name, slug, userId]);
+    res.status(201).json(info.rows[0]);
   } catch (error) {
-    if (error.message.includes('UNIQUE')) {
-      const existing = db.prepare('SELECT * FROM wisdom_categories WHERE name = ?').get(name);
-      return res.json(existing);
+    if (error.message.includes('unique') || error.message.includes('UNIQUE')) {
+      const existing = await db.query('SELECT * FROM wisdom_categories WHERE name = $1', [name]);
+      return res.json(existing.rows[0]);
     }
     res.status(500).json({ error: error.message });
   }
 });
 
-app.post('/api/wisdom/follow', (req, res) => {
-  const { userId, categoryId } = req.body;
+app.post('/api/wisdom/follow', requireAuth, async (req, res) => {
+  const userId = req.user.email; // JWT'den
+  const { categoryId } = req.body;
   try {
-    const existing = db.prepare('SELECT * FROM follows WHERE user_id = ? AND category_id = ?').get(userId, categoryId);
-    if (existing) {
-      db.prepare('DELETE FROM follows WHERE user_id = ? AND category_id = ?').run(userId, categoryId);
+    const existing = await db.query('SELECT * FROM follows WHERE user_id = $1 AND category_id = $2', [userId, categoryId]);
+    if (existing.rows[0]) {
+      await db.query('DELETE FROM follows WHERE user_id = $1 AND category_id = $2', [userId, categoryId]);
       res.json({ message: 'Takibi bıraktı', is_followed: false });
     } else {
-      db.prepare('INSERT INTO follows (user_id, category_id) VALUES (?, ?)').run(userId, categoryId);
+      await db.query('INSERT INTO follows (user_id, category_id) VALUES ($1, $2)', [userId, categoryId]);
       res.json({ message: 'Takip ediliyor', is_followed: true });
     }
   } catch (error) {
@@ -583,21 +730,125 @@ app.post('/api/wisdom/follow', (req, res) => {
   }
 });
 
-app.delete('/api/wisdom/categories/:id', (req, res) => {
+app.delete('/api/wisdom/categories/:id', requireAuth, requireAdmin, async (req, res) => {
   const { id } = req.params;
-  const adminId = req.query.adminId;
   try {
-    const user = db.prepare('SELECT role FROM users WHERE email = ?').get(adminId);
-    if (!user || user.role !== 'ADMIN') {
-      return res.status(403).json({ error: 'Sadece adminler kategori silebilir.' });
-    }
-    db.prepare('DELETE FROM wisdom_categories WHERE id = ?').run(id);
+    await db.query('DELETE FROM wisdom_categories WHERE id = $1', [id]);
     res.json({ message: 'Kategori silindi' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-server.listen(PORT, () => {
+// --- USER FOLLOWS ENDPOINTS ---
+
+app.post('/api/users/follow', requireAuth, async (req, res) => {
+  const followerEmail = req.user.email;
+  const { followingEmail } = req.body;
+  
+  if (!followingEmail) return res.status(400).json({ error: 'Takip edilecek kullanıcı gerekli' });
+  if (followerEmail === followingEmail) return res.status(400).json({ error: 'Kendinizi takip edemezsiniz' });
+
+  try {
+    const existing = await db.query('SELECT * FROM user_follows WHERE follower_id = $1 AND following_id = $2', [followerEmail, followingEmail]);
+    if (existing.rows[0]) {
+      await db.query('DELETE FROM user_follows WHERE follower_id = $1 AND following_id = $2', [followerEmail, followingEmail]);
+      res.json({ message: 'Takibi bıraktı', is_followed: false });
+    } else {
+      await db.query('INSERT INTO user_follows (follower_id, following_id) VALUES ($1, $2)', [followerEmail, followingEmail]);
+      res.json({ message: 'Takip edildi', is_followed: true });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/users/:email/network', async (req, res) => {
+  const { email } = req.params;
+  const currentUserId = req.query.currentUserId;
+
+  try {
+    const followers = await db.query(
+      'SELECT u.email, u.ad, u.role FROM user_follows f JOIN users u ON f.follower_id = u.email WHERE f.following_id = $1',
+      [email]
+    );
+    const following = await db.query(
+      'SELECT u.email, u.ad, u.role FROM user_follows f JOIN users u ON f.following_id = u.email WHERE f.follower_id = $1',
+      [email]
+    );
+    
+    let is_following = false;
+    if (currentUserId) {
+      const check = await db.query('SELECT 1 FROM user_follows WHERE follower_id = $1 AND following_id = $2', [currentUserId, email]);
+      is_following = check.rows.length > 0;
+    }
+
+    res.json({
+      followers: followers.rows,
+      following: following.rows,
+      is_following
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- DIRECT MESSAGES ENDPOINTS ---
+
+app.get('/api/messages/:otherEmail', requireAuth, async (req, res) => {
+  const currentEmail = req.user.email;
+  const { otherEmail } = req.params;
+
+  try {
+    const result = await db.query(
+      `SELECT * FROM messages 
+       WHERE (sender_id = $1 AND receiver_id = $2) 
+          OR (sender_id = $2 AND receiver_id = $1) 
+       ORDER BY created_at ASC`,
+      [currentEmail, otherEmail]
+    );
+
+    await db.query(
+      `UPDATE messages SET is_read = TRUE 
+       WHERE sender_id = $1 AND receiver_id = $2 AND is_read = FALSE`,
+      [otherEmail, currentEmail]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/messages', requireAuth, async (req, res) => {
+  const senderEmail = req.user.email;
+  const { receiverEmail, content } = req.body;
+
+  if (!receiverEmail || !content) {
+    return res.status(400).json({ error: 'Alıcı ve mesaj içeriği gerekli' });
+  }
+
+  try {
+    const result = await db.query(
+      'INSERT INTO messages (sender_id, receiver_id, content) VALUES ($1, $2, $3) RETURNING *',
+      [senderEmail, receiverEmail, content]
+    );
+    const newMessage = result.rows[0];
+
+    io.to(receiverEmail).emit('new_message', {
+      ...newMessage,
+      sender_name: req.user.ad || senderEmail.split('@')[0]
+    });
+
+    res.status(201).json(newMessage);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+const { initDb } = require('./db.cjs');
+
+server.listen(PORT, async () => {
+  await initDb();
   console.log(`Gilded backend sunucusu http://localhost:${PORT} adresinde çalışıyor`);
 });

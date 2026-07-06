@@ -73,14 +73,6 @@ function Navbar() {
 
 
 
-                        <Button
-                            component={RouterLink}
-                            to="/hall-of-fame"
-                            sx={{ color: '#D4AF37', fontWeight: 600, opacity: 0.9, '&:hover': { opacity: 1, textShadow: '0 0 8px rgba(212,175,55,0.5)' } }}
-                        >
-                            Onarılanlar
-                        </Button>
-
                         {isAdminUser(user) && (
                             <Button
                                 component={RouterLink}
@@ -135,6 +127,23 @@ function Navbar() {
                             }}
                         >
                             Bilgelik Panosu
+                        </Button>
+
+                        <Button
+                            component={RouterLink}
+                            to="/messages"
+                            sx={{
+                                color: '#94a3b8',
+                                fontWeight: 500,
+                                fontSize: '0.95rem',
+                                letterSpacing: '0.5px',
+                                '&:hover': {
+                                    color: '#D4AF37',
+                                    backgroundColor: 'transparent'
+                                }
+                            }}
+                        >
+                            Mesajlar
                         </Button>
 
                         {/* PROFİL KISMI */}

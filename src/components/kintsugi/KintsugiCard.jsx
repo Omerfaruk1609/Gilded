@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, TextField, IconButton, Typography, Collapse, Button, Tooltip, useTheme } from '@mui/material';
 import { Send as SendIcon } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 import { isAdminUser } from '../../services/auth';
@@ -18,6 +19,7 @@ const CommentItem = ({
   handleComment, 
   handleDeleteComment,
   handleGoldLeaf,
+  handleVote,
   isAdmin
 }) => {
   const theme = useTheme();
@@ -27,7 +29,43 @@ const CommentItem = ({
 
   return (
     <div className="comment-item">
-      <div className="comment-main">
+      <div className="comment-main" style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+        {/* Reddit-style vertical voting panel on the left */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '32px', bgcolor: 'rgba(255,255,255,0.02)', borderRadius: '6px', p: 0.5 }}>
+          <IconButton 
+            size="small" 
+            onClick={() => handleVote(comment.id, 'up')} 
+            sx={{ 
+              color: comment.user_vote === 'up' ? '#4caf50' : 'rgba(255,255,255,0.25)', 
+              p: 0.2,
+              '&:hover': { color: '#4caf50' }
+            }}
+          >
+            <span style={{ fontSize: '0.9rem' }}>▲</span>
+          </IconButton>
+          <Typography 
+            sx={{ 
+              fontSize: '0.75rem', 
+              fontWeight: 'bold', 
+              my: 0.2, 
+              color: comment.user_vote === 'up' ? '#4caf50' : (comment.user_vote === 'down' ? '#ff4d4d' : 'rgba(255,255,255,0.6)') 
+            }}
+          >
+            {comment.score || 0}
+          </Typography>
+          <IconButton 
+            size="small" 
+            onClick={() => handleVote(comment.id, 'down')} 
+            sx={{ 
+              color: comment.user_vote === 'down' ? '#ff4d4d' : 'rgba(255,255,255,0.25)', 
+              p: 0.2,
+              '&:hover': { color: '#ff4d4d' }
+            }}
+          >
+            <span style={{ fontSize: '0.9rem' }}>▼</span>
+          </IconButton>
+        </Box>
+
         <div style={{ flex: 1 }}>
           <div className="comment-header">
             <Typography className="comment-author">{authorLabel}</Typography>
@@ -37,85 +75,86 @@ const CommentItem = ({
           </div>
           <Typography className="comment-body">{comment.content}</Typography>
         
-        <div className="comment-actions">
-          <Button 
-            className="comment-action-btn" 
-            onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
-          >
-            Cevapla
-          </Button>
-
-          {isPostAuthor && (
+          <div className="comment-actions">
             <Button 
               className="comment-action-btn" 
-              sx={{ color: '#D4AF37 !important' }}
-              onClick={() => handleGoldLeaf(comment.id)}
-              startIcon={<span>✨</span>}
+              onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
             >
-              Altın Yaprak Ver ({comment.gold_leaves || 0})
+              Cevapla
             </Button>
-          )}
 
-          {!isPostAuthor && comment.gold_leaves > 0 && (
-             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 1 }}>
-                <span style={{ fontSize: '0.9rem' }}>✨</span>
-                <Typography sx={{ fontSize: '0.7rem', color: '#D4AF37', fontWeight: 700 }}>{comment.gold_leaves}</Typography>
-             </Box>
-          )}
+            {isPostAuthor && (
+              <Button 
+                className="comment-action-btn" 
+                sx={{ color: '#D4AF37 !important' }}
+                onClick={() => handleGoldLeaf(comment.id)}
+                startIcon={<span>✨</span>}
+              >
+                Altın Yaprak Ver ({comment.gold_leaves || 0})
+              </Button>
+            )}
+
+            {!isPostAuthor && comment.gold_leaves > 0 && (
+               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 1 }}>
+                  <span style={{ fontSize: '0.9rem' }}>✨</span>
+                  <Typography sx={{ fontSize: '0.7rem', color: '#D4AF37', fontWeight: 700 }}>{comment.gold_leaves}</Typography>
+               </Box>
+            )}
+            
+            {(comment.author_id === currentUser.email || isPostAuthor || isAdmin) && (
+              <Button 
+                className="comment-action-btn" 
+                sx={{ color: '#ff4d4d !important' }}
+                onClick={() => handleDeleteComment(comment.id)}
+              >
+                Sil
+              </Button>
+            )}
+          </div>
           
-          {(comment.author_id === currentUser.email || isPostAuthor || isAdmin) && (
-            <Button 
-              className="comment-action-btn" 
-              sx={{ color: '#ff4d4d !important' }}
-              onClick={() => handleDeleteComment(comment.id)}
-            >
-              Sil
-            </Button>
+          {replyingTo === comment.id && (
+            <Box sx={{ mt: 1 }}>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  autoFocus
+                  placeholder="Cevabını yaz..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  sx={{ '& .MuiOutlinedInput-root': { color: theme.palette.text.primary, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', fontSize: '0.8rem' } }}
+                />
+                <IconButton onClick={() => handleComment(null, comment.id)} sx={{ color: '#D4AF37' }}>
+                  <span style={{ fontSize: '1rem' }}>➤</span>
+                </IconButton>
+              </Box>
+            </Box>
           )}
         </div>
-        
-        {replyingTo === comment.id && (
-          <Box sx={{ mt: 1 }}>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <TextField
-                fullWidth
-                size="small"
-                autoFocus
-                placeholder="Cevabını yaz..."
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                sx={{ '& .MuiOutlinedInput-root': { color: theme.palette.text.primary, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', fontSize: '0.8rem' } }}
-              />
-              <IconButton onClick={() => handleComment(null, comment.id)} sx={{ color: '#D4AF37' }}>
-                <span style={{ fontSize: '1rem' }}>➤</span>
-              </IconButton>
-            </Box>
-          </Box>
-        )}
       </div>
-    </div>
 
-    {comment.children && comment.children.length > 0 && (
-      <div className="comment-thread">
-        {comment.children.map(child => (
-          <CommentItem 
-            key={child.id} 
-            comment={child} 
-            currentUser={currentUser}
-            isPostAuthor={isPostAuthor}
-            replyingTo={replyingTo}
-            setReplyingTo={setReplyingTo}
-            newComment={newComment}
-            setNewComment={setNewComment}
-            handleComment={handleComment}
-            handleDeleteComment={handleDeleteComment}
-            handleGoldLeaf={handleGoldLeaf}
-            isAdmin={isAdmin}
-          />
-        ))}
-      </div>
-    )}
-  </div>
+      {comment.children && comment.children.length > 0 && (
+        <div className="comment-thread">
+          {comment.children.map(child => (
+            <CommentItem 
+              key={child.id} 
+              comment={child} 
+              currentUser={currentUser}
+              isPostAuthor={isPostAuthor}
+              replyingTo={replyingTo}
+              setReplyingTo={setReplyingTo}
+              newComment={newComment}
+              setNewComment={setNewComment}
+              handleComment={handleComment}
+              handleDeleteComment={handleDeleteComment}
+              handleGoldLeaf={handleGoldLeaf}
+              handleVote={handleVote}
+              isAdmin={isAdmin}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -135,6 +174,7 @@ const buildCommentTree = (flatComments) => {
 };
 
 const KintsugiCard = ({ id, content, image_url, mood, post_type = 'normal', author_id, author_name, author_role, is_anonymous, initialSupport = 0, initialHasSupported = 0, onDelete }) => {
+  const navigate = useNavigate();
   const theme = useTheme();
   const [supportCount, setSupportCount] = useState(initialSupport);
   const [hasSupported, setHasSupported] = useState(initialHasSupported === 1);
@@ -166,7 +206,7 @@ const KintsugiCard = ({ id, content, image_url, mood, post_type = 'normal', auth
     try {
       const res = await fetch(`${API_URL}/comments/${commentId}`, { method: 'DELETE' });
       if (res.ok) {
-        const updatedRes = await fetch(`${API_URL}/posts/${id}/comments`);
+        const updatedRes = await fetch(`${API_URL}/posts/${id}/comments?userId=${currentUser.email}`);
         const updatedData = await updatedRes.json();
         setComments(updatedData);
         toast.success('Mesaj silindi.');
@@ -182,7 +222,7 @@ const KintsugiCard = ({ id, content, image_url, mood, post_type = 'normal', auth
   useEffect(() => {
     const fetchComments = async () => {
       try {
-        const res = await fetch(`${API_URL}/posts/${id}/comments`);
+        const res = await fetch(`${API_URL}/posts/${id}/comments?userId=${currentUser.email}`);
         const data = await res.json();
         setComments(data);
       } catch (err) {
@@ -264,12 +304,28 @@ const KintsugiCard = ({ id, content, image_url, mood, post_type = 'normal', auth
       });
       if (res.ok) {
         toast.success('Altın yaprak iliştirildi ✨');
-        const updatedRes = await fetch(`${API_URL}/posts/${id}/comments`);
+        const updatedRes = await fetch(`${API_URL}/posts/${id}/comments?userId=${currentUser.email}`);
         const updatedData = await updatedRes.json();
         setComments(updatedData);
       }
     } catch (err) {
       toast.error('Hata oluştu');
+    }
+  };
+
+  const handleVote = async (commentId, type) => {
+    try {
+      const res = await fetch(`${API_URL}/comments/${commentId}/vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type })
+      });
+      if (res.ok) {
+        const updatedData = await res.json();
+        setComments(updatedData);
+      }
+    } catch (err) {
+      toast.error('Oylama hatası.');
     }
   };
 
@@ -279,7 +335,7 @@ const KintsugiCard = ({ id, content, image_url, mood, post_type = 'normal', auth
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/comments/${id}/comments`, {
+      const response = await fetch(`${API_URL}/posts/${id}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -354,8 +410,23 @@ const KintsugiCard = ({ id, content, image_url, mood, post_type = 'normal', auth
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div className="kintsugi-author">
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography sx={{ fontWeight: 600, fontSize: '0.9rem', color: '#fff' }}>
-                {(is_anonymous === 0 || is_anonymous === '0') ? (author_name || 'İsimsiz Ruh') : (post_type === 'wisdom' ? 'Bilge Bir Ruh' : 'Bir Ruh')}
+              <Typography 
+                onClick={() => {
+                  if (is_anonymous === 0 || is_anonymous === '0' || is_anonymous === false || is_anonymous === 'false') {
+                    navigate(`/profile?email=${author_id}`);
+                  }
+                }}
+                sx={{ 
+                  fontWeight: 600, 
+                  fontSize: '0.9rem', 
+                  color: '#fff',
+                  cursor: (is_anonymous === 0 || is_anonymous === '0' || is_anonymous === false || is_anonymous === 'false') ? 'pointer' : 'default',
+                  '&:hover': {
+                    textDecoration: (is_anonymous === 0 || is_anonymous === '0' || is_anonymous === false || is_anonymous === 'false') ? 'underline' : 'none'
+                  }
+                }}
+              >
+                {(is_anonymous === 0 || is_anonymous === '0' || is_anonymous === false || is_anonymous === 'false') ? (author_name || 'İsimsiz Ruh') : (post_type === 'wisdom' ? 'Bilge Bir Ruh' : 'Bir Ruh')}
               </Typography>
               
               {author_role === 'ADMIN' && (
@@ -494,6 +565,7 @@ const KintsugiCard = ({ id, content, image_url, mood, post_type = 'normal', auth
                 handleComment={handleComment}
                 handleDeleteComment={handleDeleteComment}
                 handleGoldLeaf={handleGoldLeaf}
+                handleVote={handleVote}
                 isAdmin={isAdmin}
               />
             ))}

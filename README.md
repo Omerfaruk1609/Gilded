@@ -19,35 +19,38 @@ Gilded, sıradan bir sosyal medya uygulamasından ziyade, huzur veren dijital bi
 ### 🧘‍♂️ Kintsugi Onarım Döngüsü
 - **Altın Dikiş (Stitch):** Klasik "beğen" yerine, kullanıcılar birbirlerinin acılarına "Altın Dikiş" atarak destek olur.
 - **Dinamik Gelişim:** Her dikiş, kartın kenarlığının kalınlaşmasını ve parlaklığının artmasını sağlar.
-- **Onarım Galerisi (Hall of Fame):** Tamamen onarılan (5 dikiş alan) tüm hikayeler özel bir galeride sergilenir.
+- **Onarım Galerisi (Galeri):** Tamamen onarılan (5 dikiş alan) tüm hikayeler özel bir galeride sergilenir.
 
-### 📜 Bilgelik Panosu (Wisdom Board)
-Bilgeler tarafından yönetilen, "gürültüden uzak" bir rehberlik alanı.
-- **Bilge (Sage) Rolü:** Topluluğa rehberlik eden özel yetkili kullanıcılar.
-- **Kendi Grubunu Yönet:** Bilgeler kendi uzmanlık alanlarında gruplar (kategoriler) açabilir ve bu grupların takipçi sayılarını görebilir.
-- **Gizlilik ve Odak:** Bilgelik paylaşımları sadece o grubu takip eden kullanıcılara görünür, genel akışı meşgul etmez.
+### 📜 Bilgelik Panosu (Wisdom Board) & "Bilge" Rozeti
+- **Aydınlanmış Bilge Rolü:** Toplulukta yorum beğenileri (net upvote skoru) toplam kayıtlı kullanıcı sayısına ulaşan veya geçen kullanıcılar otomatik olarak **Bilge** rozeti/rolü kazanır.
+- **Kendi Grubunu Yönet:** Sadece Bilge veya Admin rolündeki kullanıcılar kendi uzmanlık alanlarında gruplar (kategoriler) açabilir ve yönetebilir.
 - **Zarif Tasarım:** Bilgelik paylaşımları çatlak barındırmaz; onlar zaten onarılmış, saf altın çerçeveli "bilgelik kristalleridir".
 
+### 💬 Yorumlar, Reddit Tipi Oylama ve Sohbet (DM)
+- **Reddit Tipi Dikey Oylama:** Yorumların sol tarafında dikey olarak konumlandırılmış ▲/▼ butonları ile Reddit benzeri oylama deneyimi.
+- **Takip Sistemi:** Kullanıcılar birbirlerini takip edebilir ve takip ettikleri ruhların gelişimini izleyebilir.
+- **Anlık Sohbet (Chat):** Takipleşen kullanıcılar arasında gerçek zamanlı (real-time), Socket.io tabanlı özel mesajlaşma altyapısı.
+
 ### 🛡️ Güvenlik ve Moderasyon
-- **Yerel Moderasyon Algoritması:** Dış API'lara (Gemini vb.) ihtiyaç duymayan, yüksek performanslı ve gizlilik odaklı yerel küfür/argo filtresi.
-- **Tam Anonimlik:** Kullanıcılar kendilerini en rahat şekilde ifade edebilsin diye paylaşımlar varsayılan olarak anonimdir.
-- **Gelişmiş Admin Paneli:** Tüm kategorilerin, kullanıcıların ve içeriklerin merkezi kontrolü.
+- **JWT Kimlik Doğrulama:** Tüm API istekleri JSON Web Token ile korunur. Yetkisiz veri çekme, başkasının yerine post paylaşma/silme açıkları kapatılmıştır.
+- **Yerel Moderasyon Algoritması:** Dış API'lara ihtiyaç duymayan, yüksek performanslı ve Türkçe karakter uyumlu yerel küfür/argo ve duygu koruma filtresi.
+- **Gelişmiş Yönetim Paneli:** Toplam istatistikler ve kullanıcı yönetimi/rol ataması için merkezi kontrol paneli.
 
 ---
 
 ## 🛠️ Teknoloji Yığını
 
 ### Frontend
-- **Framework:** React 18 & Vite
-- **UI & Tema:** Material UI (MUI) & Custom Vanilla CSS
-- **State & Router:** React Router 7, Context API
+- **Framework:** React 19 & Vite
+- **UI & Tema:** Material UI (MUI) & Custom CSS
+- **İletişim:** Socket.io-client (Gerçek zamanlı mesajlaşma ve anlık bildirimler)
 - **Efektler:** Canvas Confetti, CSS Keyframe Animations
 
 ### Backend
 - **Sunucu:** Node.js & Express.js
-- **Veritabanı:** SQLite (`better-sqlite3`) - Taşınabilir, hızlı ve ilişkisel.
-- **Gerçek Zamanlı İletişim:** Socket.io (Bildirimler ve anlık etkileşimler için hazır yapı).
-- **Dosya Yönetimi:** Multer (Görsel yükleme).
+- **Veritabanı:** PostgreSQL (Supabase) - Hızlı, bulut tabanlı ve güvenli ilişkisel veritabanı.
+- **Güvenlik:** JWT (JSON Web Token), bcryptjs
+- **Dosya Yönetimi:** Multer
 
 ---
 
@@ -56,75 +59,55 @@ Bilgeler tarafından yönetilen, "gürültüden uzak" bir rehberlik alanı.
 ```bash
 Gilded/
 ├── server/             # Node.js/Express Backend
-│   ├── db.cjs          # Veritabanı şeması ve SQLite bağlantısı
-│   ├── index.cjs       # Ana API sunucusu ve yetkilendirme logicleri
+│   ├── db.cjs          # Supabase PostgreSQL havuz bağlantısı ve admin kontrolü
+│   ├── index.cjs       # Ana API sunucusu, JWT doğrulama ve yetkilendirmeler
 │   ├── uploads/        # Kullanıcıların yüklediği görseller
-│   └── utils/          # aiModeration.cjs (Yerel küfür filtresi)
+│   └── utils/          # Moderasyon ve Türkçe küfür filtreleri
 ├── src/                # React Frontend
 │   ├── components/     # KintsugiCard, PostForm, Navbar, Footer vb.
-│   ├── context/        # Tema ve Kullanıcı state yönetimi
-│   ├── pages/          # Home, WisdomBoard, AdminPanel, Profile, Gallery
+│   ├── context/        # Tema ve Socket/Kullanıcı state yönetimi
+│   ├── pages/          # Home, WisdomBoard, MessagesPage, AdminPanel, Profile, Gallery
 │   └── css/            # kintsugi.css (Altın efektleri ve global stiller)
 └── index.html          # Uygulama giriş noktası
 ```
 
 ---
 
-## 🔌 API Endpoints (Gelişmiş)
+## 🚀 Kurulum ve Çalıştırma
 
-### Paylaşımlar (Posts)
-- `GET /api/posts`: "Sıcaklık" algoritmasına göre sıralanmış normal paylaşımları getirir.
-- `GET /api/posts?postType=wisdom`: Sadece takip edilen kategorilerdeki bilgelik paylaşımlarını getirir.
-- `POST /api/posts`: Yeni parça paylaş (Görsel ve kategori desteği).
+Projeyi yerel makinenizde çalıştırmak için aşağıdaki adımları izleyin:
 
-### Bilgelik (Wisdom)
-- `GET /api/wisdom/categories`: Kategorileri, takipçi sayılarını ve sahiplik durumunu getirir.
-- `POST /api/wisdom/categories`: Bilgelerin kendi grubunu açmasını sağlar.
-- `POST /api/wisdom/follow`: Kategorileri takip etme/bırakma.
+### 1. Veritabanını Kurun (Supabase)
+1. Bir [Supabase](https://supabase.com) projesi oluşturun.
+2. Projenizin panelinde **SQL Editor** kısmına gidin.
+3. Geliştirme dosyalarındaki `scratch/supabase_schema.sql` veya `C:\Users\ÖMER FARUK\.gemini\antigravity\brain\f44f89fb-2758-4c03-95b6-6584d56bd0ae\scratch\supabase_schema.sql` dosyasının içeriğini kopyalayıp SQL Editor'e yapıştırın ve **Run** tuşuna basarak tabloları oluşturun.
 
-### Admin
-- `GET /api/admin/stats`: Toplam onarım ve etkileşim sayıları.
-- `DELETE /api/wisdom/categories/:id`: Merkezi kategori yönetimi.
+### 2. Çevresel Değişkenleri Yapılandırın (`.env`)
+Proje kök dizinindeki `.env` dosyasını açın ve Supabase bilgilerinize göre doldurun:
+```env
+PORT=5000
+CORS_ORIGIN=http://localhost:5173
+DATABASE_URL=postgresql://postgres:[SENİN_SUPABASE_ŞİFREN]@db.[SENİN_PROJECT_REF].supabase.co:5432/postgres
+JWT_SECRET=kendi_guvenli_anahtarin_buraya
+```
 
----
-
-## 🚀 Kurulum ve Sıfırdan Çalıştırma
-
-Projeyi yerel makinenizde sıfırdan çalıştırmak için aşağıdaki adımları izleyin:
-
-### 1. Bağımlılıkları Yükle
-Terminali açın ve proje kök dizininde şu komutu çalıştırın:
+### 3. Bağımlılıkları Yükleyin
+Terminalde proje kök dizininde şu komutu çalıştırın:
 ```bash
 npm install
 ```
 
-### 2. Uygulamayı Başlat
-Hem **Frontend (Vite)** hem de **Backend (Express)** sunucusunu tek bir komutla başlatabilirsiniz:
+### 4. Uygulamayı Başlatın
+Sunucu ve istemciyi aynı anda çalıştırmak için şu komutu çalıştırın:
 ```bash
 npm run dev
-npm run server
 ```
-*Bu komut otomatik olarak hem istemciyi hem de sunucuyu çalıştıracaktır.*
+*Bu komut hem Express backend sunucusunu (`localhost:5000`) hem de Vite frontend geliştirme sunucusunu (`localhost:5173`) otomatik olarak başlatacaktır.*
 
-### 3. Bağlantı ve Port Bilgileri
-Proje artık çevresel değişkenler (`.env`) ile yapılandırılmıştır. Kök dizindeki `.env` dosyasından port ve API adreslerini değiştirebilirsiniz:
-- **Frontend:** [http://localhost:5173](http://localhost:5173)
-- **Backend (API):** [http://localhost:5000](http://localhost:5000)
-- **Veritabanı:** SQLite (Dosya: `server/database.sqlite`)
-
-### 4. Admin Bilgileri
-Yönetici paneline erişmek için aşağıdaki bilgileri kullanabilirsiniz:
+### 5. Admin Hesabı Bilgileri
+Veritabanı başarıyla bağlandığında, backend sunucusu otomatik olarak aşağıdaki yönetici hesabını oluşturacaktır:
 - **E-posta:** `admin@gold.com`
 - **Şifre:** `123456`
-
----
-
-## 🛠️ Teknik Detaylar
-- **Merkezi API Yönetimi:** Frontend tarafındaki tüm istekler `src/services/apiConfig.js` üzerinden yönetilir.
-- **Çevresel Değişkenler:** Hem frontend hem backend için `.env` dosyası kullanılır.
-- **Güçlendirilmiş Moderasyon:** Küfür ve topluluk kurallarına aykırı içerikler Regex tabanlı akıllı filtreleme ile kontrol edilir.
-- **Socket.io:** Bildirimler için `5000` portu üzerinden gerçek zamanlı bağlantı kurulur.
-- **Yüklemeler:** Profil ve post görselleri `server/uploads` klasöründe saklanır.
 
 ---
 
