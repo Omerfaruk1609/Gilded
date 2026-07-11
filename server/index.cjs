@@ -372,7 +372,14 @@ app.post('/api/posts/:id/support', requireAuth, async (req, res) => {
     const newSupportCount = post.support_count + 1;
     const isRepaired = newSupportCount >= 5;
 
-    await db.query('UPDATE posts SET support_count = $1, is_repaired = $2 WHERE id = $3', [newSupportCount, isRepaired, id]);
+    // Reddit benzeri Sıcaklık (Hot Score) hesapla ve veritabanını güncelle
+    const hours = (Date.now() - new Date(post.created_at).getTime()) / (1000 * 60 * 60);
+    const hotScore = (newSupportCount + 1) / Math.pow(hours + 2, 1.5);
+
+    await db.query(
+      'UPDATE posts SET support_count = $1, is_repaired = $2, hot_score = $3 WHERE id = $4',
+      [newSupportCount, isRepaired, hotScore, id]
+    );
 
     const updatedPostRes = await db.query('SELECT p.*, 1 as has_supported FROM posts p WHERE id = $1', [id]);
 

@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS posts (
     post_type VARCHAR(50) DEFAULT 'normal',
     author_id VARCHAR(255) REFERENCES users(email) ON DELETE CASCADE,
     support_count INTEGER DEFAULT 0,
+    hot_score DOUBLE PRECISION DEFAULT 0.0,
     is_repaired BOOLEAN DEFAULT FALSE,
     is_anonymous BOOLEAN DEFAULT FALSE,
     category_id INTEGER REFERENCES wisdom_categories(id) ON DELETE SET NULL,
