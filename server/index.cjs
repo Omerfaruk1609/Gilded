@@ -295,8 +295,21 @@ app.get('/api/posts/:id/comments', async (req, res) => {
   }
 });
 
-// Yeni post ekle
-app.post('/api/posts', requireAuth, upload.single('image'), async (req, res) => {
+// Yeni post ekle (Multer hata yakalama mekanizmalı sarmalayıcı ile)
+const uploadSingleImage = upload.single('image');
+app.post('/api/posts', requireAuth, (req, res, next) => {
+  uploadSingleImage(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ error: 'Görsel boyutu çok büyük. Maksimum limit 5MB\'dır.' });
+      }
+      return res.status(400).json({ error: `Görsel yükleme hatası: ${err.message}` });
+    } else if (err) {
+      return res.status(400).json({ error: err.message });
+    }
+    next();
+  });
+}, async (req, res) => {
   const { content, post_type = 'normal', category_id = null, is_anonymous = 1, mood = null } = req.body;
   const author_id = req.user.email; // JWT'den alınan kimlik
   const image_url = req.file ? `/uploads/${req.file.filename}` : null;
