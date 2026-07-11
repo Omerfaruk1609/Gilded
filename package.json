@@ -16,7 +16,6 @@
     "@google/generative-ai": "^0.24.1",
     "@mui/icons-material": "^9.0.1",
     "@mui/material": "^9.0.1",
-    "@supabase/supabase-js": "^2.105.4",
     "axios": "^1.18.1",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.10.0",
