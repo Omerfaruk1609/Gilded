@@ -1,4 +1,4 @@
--- Gilded Veritabanı Şeması
+-- Gilded Veritabanı Şeması (PostgreSQL Standart)
 
 -- 1. Users Tablosu
 CREATE TABLE IF NOT EXISTS users (
@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS wisdom_categories (
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(255) UNIQUE NOT NULL,
     description TEXT,
-    created_by VARCHAR(255)
+    created_by VARCHAR(255) REFERENCES users(email) ON DELETE SET NULL
 );
 
 -- 3. Posts Tablosu
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS posts (
     content TEXT NOT NULL,
     image_url VARCHAR(255) DEFAULT NULL,
     post_type VARCHAR(50) DEFAULT 'normal',
-    author_id VARCHAR(255),
+    author_id VARCHAR(255) REFERENCES users(email) ON DELETE CASCADE,
     support_count INTEGER DEFAULT 0,
     is_repaired BOOLEAN DEFAULT FALSE,
     is_anonymous BOOLEAN DEFAULT FALSE,
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS posts (
 -- 4. Follows Tablosu (Kategori Takip)
 CREATE TABLE IF NOT EXISTS follows (
     id SERIAL PRIMARY KEY,
-    user_id VARCHAR(255) NOT NULL,
+    user_id VARCHAR(255) NOT NULL REFERENCES users(email) ON DELETE CASCADE,
     category_id INTEGER NOT NULL REFERENCES wisdom_categories(id) ON DELETE CASCADE,
     CONSTRAINT unique_user_category UNIQUE(user_id, category_id)
 );
@@ -45,9 +45,9 @@ CREATE TABLE IF NOT EXISTS follows (
 -- 5. Notifications Tablosu
 CREATE TABLE IF NOT EXISTS notifications (
     id SERIAL PRIMARY KEY,
-    user_id VARCHAR(255) NOT NULL,
+    user_id VARCHAR(255) NOT NULL REFERENCES users(email) ON DELETE CASCADE,
     type VARCHAR(50) NOT NULL,
-    post_id INTEGER NOT NULL,
+    post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS comments (
     id SERIAL PRIMARY KEY,
     post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
-    author_id VARCHAR(255),
+    author_id VARCHAR(255) REFERENCES users(email) ON DELETE CASCADE,
     parent_id INTEGER REFERENCES comments(id) ON DELETE CASCADE,
     score INTEGER DEFAULT 0,
     gold_leaves INTEGER DEFAULT 0,
@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS comments (
 CREATE TABLE IF NOT EXISTS supports (
     id SERIAL PRIMARY KEY,
     post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
-    user_id VARCHAR(255) NOT NULL,
+    user_id VARCHAR(255) NOT NULL REFERENCES users(email) ON DELETE CASCADE,
     CONSTRAINT unique_post_user UNIQUE(post_id, user_id)
 );
 
@@ -96,7 +96,17 @@ CREATE TABLE IF NOT EXISTS messages (
 CREATE TABLE IF NOT EXISTS comment_votes (
     id SERIAL PRIMARY KEY,
     comment_id INTEGER NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
-    user_id VARCHAR(255) NOT NULL,
+    user_id VARCHAR(255) NOT NULL REFERENCES users(email) ON DELETE CASCADE,
     vote_type VARCHAR(10) NOT NULL,
     CONSTRAINT unique_comment_user_vote UNIQUE(comment_id, user_id)
 );
+
+-- Performans Artırıcı İndeksler (Indexes)
+CREATE INDEX IF NOT EXISTS idx_posts_author_id ON posts(author_id);
+CREATE INDEX IF NOT EXISTS idx_posts_category_id ON posts(category_id);
+CREATE INDEX IF NOT EXISTS idx_posts_post_type ON posts(post_type);
+CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id);
+CREATE INDEX IF NOT EXISTS idx_comments_author_id ON comments(author_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_messages_sender_receiver ON messages(sender_id, receiver_id);
+CREATE INDEX IF NOT EXISTS idx_user_follows_follower_following ON user_follows(follower_id, following_id);
