@@ -18,7 +18,23 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, 'server/uploads/'),
   filename: (req, file, cb) => cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname))
 });
-const upload = multer({ storage });
+
+const fileFilter = (req, file, cb) => {
+  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Yalnızca JPEG, PNG ve WEBP formatındaki görsellere izin verilir.'), false);
+  }
+};
+
+const upload = multer({ 
+  storage,
+  fileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  }
+});
 
 const app = express();
 const PORT = process.env.PORT || 5000;
