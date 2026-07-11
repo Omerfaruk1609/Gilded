@@ -116,6 +116,9 @@ const requireAdmin = (req, res, next) => {
 // Tüm postları getir
 app.get('/api/posts', async (req, res) => {
   const userId = req.query.userId;
+  const limit = parseInt(req.query.limit) || 10;
+  const offset = parseInt(req.query.offset) || 0;
+
   try {
     const postType = req.query.postType || 'normal'; // Varsayılan: normal postlar
     let postsResult;
@@ -134,8 +137,10 @@ app.get('/api/posts', async (req, res) => {
             ${isRepairedFilter}
             AND p.category_id = $3
             AND EXISTS (SELECT 1 FROM follows f WHERE f.category_id = p.category_id AND f.user_id = $4)
+            ORDER BY p.hot_score DESC, p.created_at DESC
+            LIMIT $5 OFFSET $6
           `;
-          postsResult = await db.query(query, [userId, postType, req.query.categoryId, userId]);
+          postsResult = await db.query(query, [userId, postType, req.query.categoryId, userId, limit, offset]);
         } else {
           const query = `
             SELECT p.*, u.ad as author_name, u.role as author_role, c.name as category_name,
@@ -146,8 +151,10 @@ app.get('/api/posts', async (req, res) => {
             WHERE p.post_type = $2
             ${isRepairedFilter}
             AND EXISTS (SELECT 1 FROM follows f WHERE f.category_id = p.category_id AND f.user_id = $3)
+            ORDER BY p.hot_score DESC, p.created_at DESC
+            LIMIT $4 OFFSET $5
           `;
-          postsResult = await db.query(query, [userId, postType, userId]);
+          postsResult = await db.query(query, [userId, postType, userId, limit, offset]);
         }
       } else {
         const query = `
@@ -158,8 +165,10 @@ app.get('/api/posts', async (req, res) => {
           LEFT JOIN wisdom_categories c ON p.category_id = c.id
           WHERE p.post_type = $2
           ${isRepairedFilter}
+          ORDER BY p.hot_score DESC, p.created_at DESC
+          LIMIT $3 OFFSET $4
         `;
-        postsResult = await db.query(query, [userId, postType]);
+        postsResult = await db.query(query, [userId, postType, limit, offset]);
       }
     } else {
       // Misafirler sadece normal postları görsün, bilgelik gizli
@@ -174,23 +183,14 @@ app.get('/api/posts', async (req, res) => {
           LEFT JOIN wisdom_categories c ON p.category_id = c.id
           WHERE p.post_type = 'normal'
           ${isRepairedFilter}
+          ORDER BY p.hot_score DESC, p.created_at DESC
+          LIMIT $1 OFFSET $2
         `;
-        postsResult = await db.query(query);
+        postsResult = await db.query(query, [limit, offset]);
       }
     }
     
-    const posts = postsResult.rows;
-
-    // Hacker News / Reddit benzeri Sıcaklık Algoritması
-    posts.sort((a, b) => {
-      const hoursA = (Date.now() - new Date(a.created_at).getTime()) / (1000 * 60 * 60);
-      const hoursB = (Date.now() - new Date(b.created_at).getTime()) / (1000 * 60 * 60);
-      const scoreA = (a.support_count + 1) / Math.pow(hoursA + 2, 1.5);
-      const scoreB = (b.support_count + 1) / Math.pow(hoursB + 2, 1.5);
-      return scoreB - scoreA;
-    });
-
-    res.json(posts);
+    res.json(postsResult.rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
