@@ -52,15 +52,20 @@ io.use((socket, next) => {
 });
 
 io.on('connection', (socket) => {
-  console.log('Bir kullanıcı bağlandı:', socket.id);
+  console.log('Bir kullanıcı bağlandı (Güvenli):', socket.id, socket.user.email);
 
-  socket.on('join', (userId) => {
-    socket.join(userId);
-    console.log(`Kullanıcı ${userId} odasına katıldı.`);
+  // Kullanıcıyı kendi e-posta adresine ait odaya otomatik olarak al (Güvenli)
+  socket.join(socket.user.email);
+  console.log(`Kullanıcı ${socket.user.email} kendi güvenli odasına otomatik katıldı.`);
+
+  // Eski join eventi uyumluluk için tutuluyor ancak parametre olarak gelen userId'ye güvenmek yerine socket.user.email kullanılıyor
+  socket.on('join', () => {
+    socket.join(socket.user.email);
+    console.log(`Kullanıcı ${socket.user.email} (güvenli) odasına katıldı.`);
   });
 
   socket.on('disconnect', () => {
-    console.log('Kullanıcı ayrıldı');
+    console.log('Kullanıcı ayrıldı:', socket.user.email);
   });
 });
 

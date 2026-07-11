@@ -22,10 +22,14 @@ export const SocketProvider = ({ children }) => {
 
   useEffect(() => {
     if (user && user.email) {
-      const newSocket = io(API_BASE_URL);
+      const newSocket = io(API_BASE_URL, {
+        auth: {
+          token: user.token
+        }
+      });
       setSocket(newSocket);
 
-      newSocket.emit('join', user.email);
+      newSocket.emit('join');
 
       newSocket.on('new_notification', (data) => {
         toast.success(data.message, {
