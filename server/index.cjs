@@ -10,6 +10,7 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const { containsProfanity } = require('./utils/moderation.cjs');
 const { analyzeComment } = require('./utils/aiModeration.cjs');
+const { generatePhilosopherWisdom } = require('./utils/philosopherBot.cjs');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'gilded-secret-key-123';
 
@@ -218,6 +219,21 @@ app.get('/api/posts/:id', async (req, res) => {
     const post = result.rows[0];
     if (!post) return res.status(404).json({ error: 'Post bulunamadı' });
     res.json(post);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Post için felsefi tavsiye / kadim bilgelik üret
+app.post('/api/posts/:id/philosopher-wisdom', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const postRes = await db.query('SELECT * FROM posts WHERE id = $1', [id]);
+    const post = postRes.rows[0];
+    if (!post) return res.status(404).json({ error: 'Post bulunamadı' });
+
+    const wisdom = await generatePhilosopherWisdom(post.content, post.mood);
+    res.json(wisdom);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

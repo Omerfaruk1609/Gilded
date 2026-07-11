@@ -183,6 +183,29 @@ const KintsugiCard = ({ id, content, image_url, mood, post_type = 'normal', auth
   const [loading, setLoading] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
+  const [wisdom, setWisdom] = useState(null);
+  const [wisdomLoading, setWisdomLoading] = useState(false);
+
+  const handleGetWisdom = async () => {
+    if (wisdomLoading) return;
+    setWisdomLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/posts/${id}/philosopher-wisdom`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setWisdom(data);
+      } else {
+        toast.error('Bilgelik öğüdü alınamadı.');
+      }
+    } catch (err) {
+      toast.error('Bağlantı hatası oluştu.');
+    } finally {
+      setWisdomLoading(false);
+    }
+  };
 
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
   const isAdmin = isAdminUser(currentUser);
@@ -514,6 +537,16 @@ const KintsugiCard = ({ id, content, image_url, mood, post_type = 'normal', auth
             Yorum At
           </Button>
 
+          {!isWisdom && (
+            <Button 
+              onClick={handleGetWisdom}
+              disabled={wisdomLoading}
+              sx={{ color: '#D4AF37', textTransform: 'none', ml: 1 }}
+            >
+              {wisdomLoading ? 'Düşünülüyor...' : 'Bilgeye Danış 🏺'}
+            </Button>
+          )}
+
           {comments.length > 0 && (
             <Button 
               onClick={() => setShowComments(!showComments)}
@@ -531,6 +564,29 @@ const KintsugiCard = ({ id, content, image_url, mood, post_type = 'normal', auth
             </Tooltip>
           )}
         </Box>
+
+        {wisdom && (
+          <Box sx={{ 
+            mt: 2, 
+            mb: 2,
+            p: 2.5, 
+            borderRadius: '16px', 
+            bgcolor: 'rgba(212, 175, 55, 0.03)', 
+            border: '1px solid rgba(212, 175, 55, 0.25)',
+            boxShadow: '0 0 15px rgba(212, 175, 55, 0.05)',
+            position: 'relative'
+          }}>
+            <Typography variant="caption" sx={{ color: '#D4AF37', textTransform: 'uppercase', letterSpacing: 1.5, fontWeight: 700, display: 'block', mb: 1 }}>
+              🔮 Kadim Bilgelik ({wisdom.philosopher})
+            </Typography>
+            <Typography sx={{ fontStyle: 'italic', color: '#fff', fontSize: '0.95rem', mb: 1.5, fontFamily: "'Playfair Display', serif" }}>
+              {wisdom.quote}
+            </Typography>
+            <Typography sx={{ color: '#aaa', fontSize: '0.85rem', lineHeight: 1.5 }}>
+              {wisdom.advice}
+            </Typography>
+          </Box>
+        )}
 
         <Collapse in={replyingTo === 'root'}>
           <Box sx={{ mt: 2 }}>

@@ -1,14 +1,16 @@
 import { AppBar, Box, Button, Toolbar, Typography, Avatar, IconButton } from '@mui/material'
 import { Link as RouterLink, useNavigate } from 'react-router-dom'
-import { useContext } from 'react'
+import { useContext, useState } from 'react'
 import { ThemeContext } from '../../context/ThemeContext'
 import { clearStoredUser, getStoredUser, isAdminUser, logoutUser } from '../../services/auth'
 import NotificationsMenu from './NotificationsMenu'
+import MeditationModal from './MeditationModal'
 
 function Navbar() {
     const navigate = useNavigate()
     const user = getStoredUser()
     const { mode, toggleTheme } = useContext(ThemeContext)
+    const [meditationOpen, setMeditationOpen] = useState(false)
 
     const handleLogout = async () => {
         try {
@@ -146,6 +148,22 @@ function Navbar() {
                             Mesajlar
                         </Button>
 
+                        <Button
+                            onClick={() => setMeditationOpen(true)}
+                            sx={{
+                                color: '#94a3b8',
+                                fontWeight: 500,
+                                fontSize: '0.95rem',
+                                letterSpacing: '0.5px',
+                                '&:hover': {
+                                    color: '#D4AF37',
+                                    backgroundColor: 'transparent'
+                                }
+                            }}
+                        >
+                            Meditasyon 🧘
+                        </Button>
+
                         {/* PROFİL KISMI */}
                         <Box
                             component={RouterLink}
@@ -241,6 +259,7 @@ function Navbar() {
                     </>
                 )}
             </Toolbar>
+            <MeditationModal open={meditationOpen} onClose={() => setMeditationOpen(false)} />
         </AppBar>
     )
 }
