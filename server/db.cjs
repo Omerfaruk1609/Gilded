@@ -4,10 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 let pool = null;
-let sqliteDb = null;
-let useSqlite = false;
 
-// PostgreSQL bağlantı havuzunu ayarla (URL varsa)
 if (process.env.DATABASE_URL) {
   let dbUrl = process.env.DATABASE_URL.trim();
   // Şifrenin sonunda yanlışlıkla kalmış olabilecek :@ karakterini temizle
@@ -21,59 +18,31 @@ if (process.env.DATABASE_URL) {
       rejectUnauthorized: false
     } : false
   });
+} else {
+  console.error("❌ HATA: DATABASE_URL tanımlanmamış. PostgreSQL bağlantısı kurulamıyor.");
+  process.exit(1);
 }
 
-// Yerel SQLite veritabanını ilklendir
-function initSqlite() {
-  console.log('⚠️ Supabase bağlantısı pasif veya başarısız. Yerel SQLite veritabanına geçiliyor...');
-  useSqlite = true;
-  const Database = require('better-sqlite3');
-  const dbPath = path.join(__dirname, 'database.sqlite');
-  
-  sqliteDb = new Database(dbPath);
-  
-  // Yabancı anahtar (Foreign Key) kısıtlamalarını etkinleştir
-  sqliteDb.pragma('foreign_keys = ON');
-
-  // Şemayı oku ve tabloları oluştur
+// Veritabanını ilklendir (Tabloları kontrol et ve admin kullanıcısını oluştur)
+async function initDb() {
   try {
+    const client = await pool.connect();
+    client.release();
+    console.log('✅ PostgreSQL veritabanına başarıyla bağlandı.');
+    
+    // Veritabanı tablolarını schema.sql kullanarak oluştur/kontrol et
     const schemaPath = path.join(__dirname, 'schema.sql');
     if (fs.existsSync(schemaPath)) {
       const schemaSql = fs.readFileSync(schemaPath, 'utf8');
-      
-      // PostgreSQL şemasını SQLite uyumlu hale getir
-      const sqliteSchema = schemaSql
-        .replace(/SERIAL PRIMARY KEY/gi, 'INTEGER PRIMARY KEY AUTOINCREMENT')
-        .replace(/TIMESTAMP WITH TIME ZONE/gi, 'TIMESTAMP')
-        .replace(/BOOLEAN DEFAULT FALSE/gi, 'INTEGER DEFAULT 0')
-        .replace(/BOOLEAN DEFAULT TRUE/gi, 'INTEGER DEFAULT 1')
-        .replace(/VARCHAR\(\d+\)/gi, 'TEXT')
-        .replace(/character varying\(\d+\)/gi, 'TEXT');
-      
-      // Tüm şemayı çalıştır
-      sqliteDb.exec(sqliteSchema);
-      console.log('✅ Yerel SQLite tabloları kontrol edildi/oluşturuldu.');
+      // PostgreSQL üzerinde şemayı çalıştır
+      await pool.query(schemaSql);
+      console.log('✅ PostgreSQL tabloları kontrol edildi/oluşturuldu.');
     } else {
-      console.warn('⚠️ Şema dosyası (schema.sql) bulunamadı, SQLite tabloları otomatik oluşturulamadı.');
+      console.warn('⚠️ Şema dosyası (schema.sql) bulunamadı.');
     }
   } catch (err) {
-    console.error('❌ Yerel SQLite şema kurulum hatası:', err);
-  }
-}
-
-// Veritabanını ilklendir (İlk çalışma ve admin kullanıcısı)
-async function initDb() {
-  if (pool) {
-    try {
-      const client = await pool.connect();
-      client.release();
-      console.log('✅ Supabase PostgreSQL veritabanına başarıyla bağlandı.');
-    } catch (err) {
-      console.error('❌ PostgreSQL bağlantısı kurulamadı:', err.message);
-      initSqlite();
-    }
-  } else {
-    initSqlite();
+    console.error('❌ PostgreSQL başlatma/şema kurulum hatası:', err.message);
+    process.exit(1);
   }
 
   // Yönetici hesabı kontrolü ve oluşturma
@@ -103,38 +72,9 @@ async function initDb() {
   }
 }
 
-// PostgreSQL ve SQLite uyumlu dinamik sorgu metodu
+// PostgreSQL sorgu metodu
 async function query(text, params = []) {
-  if (useSqlite) {
-    // PostgreSQL uyumlu bazı kısımları SQLite'a çevir
-    let sqliteText = text.replace(/::int/gi, '');
-    
-    // PostgreSQL $1, $2 parametrelerini SQLite ? parametrelerine çevir
-    sqliteText = sqliteText.replace(/\$\d+/g, '?');
-
-    try {
-      const stmt = sqliteDb.prepare(sqliteText);
-      let rows = [];
-
-      // SELECT veya RETURNING içeren sorgularda veri okumak için .all() kullan
-      if (/select|returning/i.test(sqliteText)) {
-        rows = stmt.all(params);
-      } else {
-        const info = stmt.run(params);
-        rows = [];
-      }
-
-      return {
-        rows: rows || [],
-        rowCount: rows ? rows.length : 0
-      };
-    } catch (err) {
-      console.error('❌ SQLite Sorgu Hatası:', err.message, '\nSorgu:', sqliteText, '\nParametreler:', params);
-      throw err;
-    }
-  } else {
-    return pool.query(text, params);
-  }
+  return pool.query(text, params);
 }
 
 module.exports = {
