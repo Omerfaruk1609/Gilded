@@ -1,24 +1,6 @@
 import { API_URL } from './apiConfig';
 
-// Global fetch interceptor to attach JWT token to all API calls
-const originalFetch = window.fetch;
-window.fetch = async (url, options = {}) => {
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-        try {
-            const user = JSON.parse(userStr);
-            if (user && user.token) {
-                options.headers = {
-                    ...options.headers,
-                    'Authorization': `Bearer ${user.token}`
-                };
-            }
-        } catch (e) {
-            console.error('Failed to parse user for auth header', e);
-        }
-    }
-    return originalFetch(url, options);
-};
+
 
 const triggerAuthChange = () => {
     window.dispatchEvent(new Event('auth-change'));
