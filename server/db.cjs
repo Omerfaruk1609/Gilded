@@ -45,30 +45,31 @@ async function initDb() {
     process.exit(1);
   }
 
-  // Yönetici hesabı kontrolü ve oluşturma
-  const adminEmail = 'admin@gold.com';
-  const adminPassword = '123456';
-  const adminAd = 'Admin';
+  // Yönetici hesabı kontrolü (sadece ortam değişkenleri tanımlıysa çalıştırılır)
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminPassword = process.env.ADMIN_PASSWORD;
 
-  try {
-    const res = await query('SELECT * FROM users WHERE email = $1', [adminEmail]);
-    const existingAdmin = res.rows[0];
+  if (adminEmail && adminPassword) {
+    try {
+      const res = await query('SELECT * FROM users WHERE email = $1', [adminEmail]);
+      const existingAdmin = res.rows[0];
 
-    if (!existingAdmin) {
-      const hashedPassword = bcrypt.hashSync(adminPassword, 10);
-      await query(
-        'INSERT INTO users (email, password, ad, role) VALUES ($1, $2, $3, $4)',
-        [adminEmail, hashedPassword, adminAd, 'ADMIN']
-      );
-      console.log('✅ Admin hesabı oluşturuldu: admin@gold.com');
-    } else {
-      if (existingAdmin.role !== 'ADMIN') {
-        await query('UPDATE users SET role = $1 WHERE email = $2', ['ADMIN', adminEmail]);
-        console.log('⬆️ Mevcut hesap ADMIN rolüne yükseltildi: admin@gold.com');
+      if (!existingAdmin) {
+        const hashedPassword = bcrypt.hashSync(adminPassword, 10);
+        await query(
+          'INSERT INTO users (email, password, ad, role) VALUES ($1, $2, $3, $4)',
+          [adminEmail, hashedPassword, 'Admin', 'ADMIN']
+        );
+        console.log(`✅ Admin hesabı oluşturuldu: ${adminEmail}`);
+      } else {
+        if (existingAdmin.role !== 'ADMIN') {
+          await query('UPDATE users SET role = $1 WHERE email = $2', ['ADMIN', adminEmail]);
+          console.log(`⬆️ Mevcut hesap ADMIN rolüne yükseltildi: ${adminEmail}`);
+        }
       }
+    } catch (err) {
+      console.error('❌ Veritabanı başlatma/admin kontrol hatası:', err);
     }
-  } catch (err) {
-    console.error('❌ Veritabanı başlatma/admin kontrol hatası:', err);
   }
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Box, Typography, Container, Grid, Paper, Tabs, Tab, 
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
@@ -11,8 +11,9 @@ import {
   PostAdd as PostAddIcon, 
   AutoFixHigh as AutoFixHighIcon 
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { API_URL } from '../services/apiConfig';
+import apiClient from '../services/apiClient';
 
 function AdminPanel() {
   const [tab, setTab] = useState(0);
@@ -21,100 +22,84 @@ function AdminPanel() {
   const [posts, setPosts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const refetch = () => setRefreshTrigger(prev => prev + 1);
+
   useEffect(() => {
-    fetchData();
-  }, []);
+    let isCancelled = false;
+    const loadData = async () => {
+      try {
+        const [statsRes, usersRes, postsRes, catsRes] = await Promise.all([
+          apiClient.get('/admin/stats', { params: { admin_email: currentUser.email } }),
+          apiClient.get('/admin/users', { params: { admin_email: currentUser.email } }),
+          apiClient.get('/posts'),
+          apiClient.get('/wisdom/categories')
+        ]);
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [statsRes, usersRes, postsRes, catsRes] = await Promise.all([
-        fetch(`${API_URL}/admin/stats?admin_email=${currentUser.email}`),
-        fetch(`${API_URL}/admin/users?admin_email=${currentUser.email}`),
-        fetch(`${API_URL}/posts`),
-        fetch(`${API_URL}/wisdom/categories`)
-      ]);
-
-      if (statsRes.status === 403 || usersRes.status === 403) {
-        toast.error('Bu alana erişim yetkiniz yok!');
-        window.location.href = '/';
-        return;
+        if (!isCancelled) {
+          setStats(statsRes.data);
+          setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
+          setPosts(Array.isArray(postsRes.data) ? postsRes.data : []);
+          setCategories(Array.isArray(catsRes.data) ? catsRes.data : []);
+        }
+      } catch (error) {
+        if (error.response && error.response.status === 403) {
+          toast.error('Bu alana erişim yetkiniz yok!');
+          navigate('/');
+          return;
+        }
+        toast.error(error.response?.data?.error || error.message || 'Veriler yüklenemedi');
+      } finally {
+        if (!isCancelled) setLoading(false);
       }
+    };
 
-      if (!statsRes.ok || !usersRes.ok || !postsRes.ok) {
-        throw new Error('Sunucu hatası oluştu');
-      }
-
-      const statsData = await statsRes.json();
-      const usersData = await usersRes.json();
-      const postsData = await postsRes.json();
-      const catsData = await catsRes.json();
-
-      setStats(statsData);
-      setUsers(Array.isArray(usersData) ? usersData : []);
-      setPosts(Array.isArray(postsData) ? postsData : []);
-      setCategories(Array.isArray(catsData) ? catsData : []);
-    } catch (error) {
-      toast.error(error.message || 'Veriler yüklenemedi');
-    } finally {
-      setLoading(false);
-    }
-  };
+    loadData();
+    return () => { isCancelled = true; };
+  }, [currentUser.email, navigate, refreshTrigger]);
 
   const handleUpdateRole = async (userId, newRole) => {
     try {
-      const res = await fetch(`${API_URL}/admin/users/${userId}/role`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ admin_email: currentUser.email, role: newRole })
-      });
-      if (res.ok) {
-        toast.success('Kullanıcı rolü güncellendi');
-        
-        // Kendi yetkisini değiştirdiyse (Admin'den başka bir şeye)
-        if (currentUser.email === users.find(u => u.id === userId)?.email && newRole !== 'ADMIN') {
-          const updatedUser = { ...currentUser, role: newRole };
-          localStorage.setItem('user', JSON.stringify(updatedUser));
-          window.location.href = '/';
-          return;
-        }
-
-        fetchData();
+      await apiClient.put(`/admin/users/${userId}/role`, { admin_email: currentUser.email, role: newRole });
+      toast.success('Kullanıcı rolü güncellendi');
+      
+      // Kendi yetkisini değiştirdiyse (Admin'den başka bir şeye)
+      if (currentUser.email === users.find(u => u.id === userId)?.email && newRole !== 'ADMIN') {
+        const updatedUser = { ...currentUser, role: newRole };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        navigate('/');
+        return;
       }
+
+      refetch();
     } catch (error) {
-      toast.error('Hata oluştu');
+      toast.error(error.response?.data?.error || 'Hata oluştu');
     }
   };
 
   const handleDeletePost = async (postId) => {
     if (!window.confirm('Bu içeriği silmek istediğine emin misin?')) return;
     try {
-      const res = await fetch(`${API_URL}/posts/${postId}`, { method: 'DELETE' });
-      if (res.ok) {
-        toast.success('İçerik silindi');
-        fetchData();
-      }
+      await apiClient.delete(`/posts/${postId}`);
+      toast.success('İçerik silindi');
+      refetch();
     } catch (error) {
-      toast.error('Hata oluştu');
+      toast.error(error.response?.data?.error || 'Hata oluştu');
     }
   };
 
   const handleDeleteCategory = async (catId) => {
     if (!window.confirm('Bu kategoriyi silmek istediğine emin misin? Bu kategoriye ait tüm takip ilişkileri de silinecektir.')) return;
     try {
-      const res = await fetch(`${API_URL}/wisdom/categories/${catId}?adminId=${currentUser.email}`, { method: 'DELETE' });
-      if (res.ok) {
-        toast.success('Kategori silindi');
-        fetchData();
-      } else {
-        const data = await res.json();
-        toast.error(data.error || 'Hata oluştu');
-      }
+      await apiClient.delete(`/wisdom/categories/${catId}`, { params: { adminId: currentUser.email } });
+      toast.success('Kategori silindi');
+      refetch();
     } catch (error) {
-      toast.error('Hata oluştu');
+      toast.error(error.response?.data?.error || 'Hata oluştu');
     }
   };
 

@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { IconButton, Badge, Menu, MenuItem, Typography, Box } from '@mui/material';
 import { Notifications as NotificationsIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { getStoredUser } from '../../services/auth';
-import { API_URL } from '../../services/apiConfig';
+import apiClient from '../../services/apiClient';
 
 const NotificationsMenu = () => {
   const [notifications, setNotifications] = useState([]);
@@ -12,22 +12,20 @@ const NotificationsMenu = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user) {
-      fetchNotifications();
-    }
-  }, [user]);
-
-  const fetchNotifications = async () => {
-    try {
-      const res = await fetch(`${API_URL}/notifications/${user.email}`);
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(data);
+    if (!user?.email) return;
+    let isCancelled = false;
+    const fetchNotifications = async () => {
+      try {
+        const res = await apiClient.get(`/notifications/${user.email}`);
+        if (!isCancelled) setNotifications(res.data);
+      } catch (err) {
+        console.error(err);
       }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+    };
+
+    fetchNotifications();
+    return () => { isCancelled = true; };
+  }, [user?.email]);
 
   const handleOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -40,7 +38,7 @@ const NotificationsMenu = () => {
   const markAsRead = async (notif) => {
     try {
       if (!notif.is_read) {
-        await fetch(`${API_URL}/notifications/${notif.id}/read`, { method: 'PUT' });
+        await apiClient.put(`/notifications/${notif.id}/read`);
         setNotifications(notifications.map(n => n.id === notif.id ? { ...n, is_read: 1 } : n));
       }
       handleClose();

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Box, Typography, TextField, Button, Paper, Divider, Container, CircularProgress } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { registerUser } from '../services/auth';

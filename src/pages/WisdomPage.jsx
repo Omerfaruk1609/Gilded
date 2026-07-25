@@ -1,61 +1,59 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Container, Typography, Box, CircularProgress, Button } from '@mui/material';
 import toast from 'react-hot-toast';
 import KintsugiCard from '../components/kintsugi/KintsugiCard';
-import { API_URL } from '../services/apiConfig';
+import apiClient from '../services/apiClient';
 
 const WisdomPage = () => {
   const [posts, setPosts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categoryTrigger, setCategoryTrigger] = useState(0);
   
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
   useEffect(() => {
-    fetchCategories();
-    fetchPosts();
-  }, [selectedCategory]);
-
-  const fetchCategories = async () => {
-    try {
-      const res = await fetch(`${API_URL}/wisdom/categories?userId=${currentUser.email}`);
-      const data = await res.json();
-      setCategories(data);
-    } catch (err) {
-      console.error('Kategoriler yüklenemedi:', err);
-    }
-  };
-
-  const fetchPosts = async () => {
-    setLoading(true);
-    try {
-      let url = `${API_URL}/posts?postType=wisdom&userId=${currentUser.email}`;
-      if (selectedCategory) {
-        url += `&categoryId=${selectedCategory}`;
+    let isCancelled = false;
+    const loadCategories = async () => {
+      try {
+        const res = await apiClient.get('/wisdom/categories', { params: { userId: currentUser.email } });
+        if (!isCancelled) setCategories(res.data);
+      } catch (err) {
+        console.error('Kategoriler yüklenemedi:', err);
       }
-      const res = await fetch(url);
-      const data = await res.json();
-      setPosts(data);
-    } catch (error) {
-      console.error('Gönderiler yüklenemedi:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+    loadCategories();
+    return () => { isCancelled = true; };
+  }, [currentUser.email, categoryTrigger]);
+
+  useEffect(() => {
+    let isCancelled = false;
+    const loadPosts = async () => {
+      try {
+        const params = { postType: 'wisdom', userId: currentUser.email };
+        if (selectedCategory) {
+          params.categoryId = selectedCategory;
+        }
+        const res = await apiClient.get('/posts', { params });
+        if (!isCancelled) setPosts(res.data);
+      } catch (error) {
+        console.error('Gönderiler yüklenemedi:', error);
+      } finally {
+        if (!isCancelled) setLoading(false);
+      }
+    };
+
+    loadPosts();
+    return () => { isCancelled = true; };
+  }, [currentUser.email, selectedCategory]);
 
   const handleFollow = async (categoryId) => {
     try {
-      const res = await fetch(`${API_URL}/wisdom/follow`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: currentUser.email, categoryId })
-      });
-      if (res.ok) {
-        fetchCategories();
-        toast.success('Takip durumu güncellendi.');
-      }
-    } catch (err) {
+      await apiClient.post('/wisdom/follow', { userId: currentUser.email, categoryId });
+      setCategoryTrigger(prev => prev + 1);
+      toast.success('Takip durumu güncellendi.');
+    } catch {
       toast.error('Takip işlemi başarısız.');
     }
   };

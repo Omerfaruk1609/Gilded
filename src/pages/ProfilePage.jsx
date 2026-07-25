@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Box, Typography, Container, Grid, Paper, Avatar, Button } from '@mui/material';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import KintsugiCard from '../components/kintsugi/KintsugiCard';
-import { API_URL } from '../services/apiConfig';
+import apiClient from '../services/apiClient';
 import { getBadge } from '../services/auth';
 
 function ProfilePage() {
@@ -20,54 +20,42 @@ function ProfilePage() {
   const targetEmail = searchParams.get('email') || currentUser.email;
   const isOwnProfile = targetEmail === currentUser.email;
 
-  const fetchProfileData = async () => {
-    try {
-      const [postsRes, statsRes, networkRes] = await Promise.all([
-        fetch(`${API_URL}/users/${targetEmail}/posts`),
-        fetch(`${API_URL}/users/${targetEmail}/stats`),
-        fetch(`${API_URL}/users/${targetEmail}/network?currentUserId=${currentUser.email}`)
-      ]);
-      
-      const postsData = await postsRes.json();
-      const statsData = await statsRes.json();
-      const networkData = await networkRes.json();
-      
-      setPosts(Array.isArray(postsData) ? postsData : []);
-      setStats(statsData || { received: 0, given: 0 });
-      setNetwork(networkData || { followers: [], following: [], is_following: false });
-    } catch (error) {
-      console.error('Profil yükleme hatası:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    if (targetEmail) {
-      fetchProfileData();
-    }
-  }, [targetEmail]);
+    if (!targetEmail) return;
+    let isCancelled = false;
+    const loadProfile = async () => {
+      try {
+        const [postsRes, statsRes, networkRes] = await Promise.all([
+          apiClient.get(`/users/${targetEmail}/posts`),
+          apiClient.get(`/users/${targetEmail}/stats`),
+          apiClient.get(`/users/${targetEmail}/network`, { params: { currentUserId: currentUser.email } })
+        ]);
+        
+        if (!isCancelled) {
+          setPosts(Array.isArray(postsRes.data) ? postsRes.data : []);
+          setStats(statsRes.data || { received: 0, given: 0 });
+          setNetwork(networkRes.data || { followers: [], following: [], is_following: false });
+        }
+      } catch (error) {
+        console.error('Profil yükleme hatası:', error);
+      } finally {
+        if (!isCancelled) setLoading(false);
+      }
+    };
+
+    loadProfile();
+    return () => { isCancelled = true; };
+  }, [targetEmail, currentUser.email]);
 
   const handleFollowUser = async () => {
     try {
-      const res = await fetch(`${API_URL}/users/follow`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ followingEmail: targetEmail })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        toast.success(data.message);
-        // Refresh network info
-        const networkRes = await fetch(`${API_URL}/users/${targetEmail}/network?currentUserId=${currentUser.email}`);
-        const networkData = await networkRes.json();
-        setNetwork(networkData);
-      } else {
-        const data = await res.json();
-        toast.error(data.error || 'Takip işlemi başarısız.');
-      }
+      const res = await apiClient.post('/users/follow', { followingEmail: targetEmail });
+      toast.success(res.data.message);
+      // Refresh network info
+      const networkRes = await apiClient.get(`/users/${targetEmail}/network`, { params: { currentUserId: currentUser.email } });
+      setNetwork(networkRes.data);
     } catch (e) {
-      toast.error('Takip işlemi sırasında hata oluştu.');
+      toast.error(e.response?.data?.error || 'Takip işlemi sırasında hata oluştu.');
     }
   };
 
@@ -231,7 +219,7 @@ function ProfilePage() {
           /* Timeline View */
           <Box sx={{ position: 'relative', pl: 4, ml: 2, borderLeft: '2px solid rgba(212,175,55,0.2)' }}>
             {Array.isArray(posts) && posts.length > 0 ? (
-              [...posts].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).map((post, idx) => (
+              [...posts].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).map((post) => (
                 <Box key={post.id} sx={{ mb: 6, position: 'relative' }}>
                   {/* Timeline Dot */}
                   <Box sx={{ 

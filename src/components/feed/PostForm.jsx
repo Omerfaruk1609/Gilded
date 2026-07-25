@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Box, TextField, Button, Paper, Typography, useTheme, FormControlLabel, Checkbox } from '@mui/material';
 import toast from 'react-hot-toast';
 import { isAdminUser, isBilgeUser, getStoredUser } from '../../services/auth';
-import { API_URL } from '../../services/apiConfig';
+import apiClient from '../../services/apiClient';
 
 const PostForm = ({ onPostCreated }) => {
   const [content, setContent] = useState('');
@@ -23,9 +23,9 @@ const PostForm = ({ onPostCreated }) => {
   React.useEffect(() => {
     if (isBilge || isAdminUser(getStoredUser())) {
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-      fetch(`${API_URL}/wisdom/categories?userId=${currentUser.email}`)
-        .then(res => res.json())
-        .then(data => setCategories(data));
+      apiClient.get('/wisdom/categories', { params: { userId: currentUser.email } })
+        .then(res => setCategories(res.data))
+        .catch(err => console.error('Kategoriler çekilemedi:', err));
     }
   }, [isBilge]);
 
@@ -41,14 +41,11 @@ const PostForm = ({ onPostCreated }) => {
 
       // Eğer yeni kategori oluşturuluyorsa
       if (isWisdom && isCreatingCategory && newCategoryName.trim()) {
-        const catRes = await fetch(`${API_URL}/wisdom/categories`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: newCategoryName.trim(), userId: currentUser.email })
+        const catRes = await apiClient.post('/wisdom/categories', {
+          name: newCategoryName.trim(),
+          userId: currentUser.email
         });
-        const catData = await catRes.json();
-        if (!catRes.ok) throw new Error(catData.error || 'Kategori oluşturulamadı');
-        finalCategoryId = catData.id;
+        finalCategoryId = catRes.data.id;
       }
 
       const formData = new FormData();
@@ -66,13 +63,8 @@ const PostForm = ({ onPostCreated }) => {
         formData.append('image', image);
       }
 
-      const response = await fetch(`${API_URL}/posts`, {
-        method: 'POST',
-        body: formData,
-      });
-      
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Paylaşım yapılamadı');
+      const response = await apiClient.post('/posts', formData);
+      const data = response.data;
 
       setContent('');
       setImage(null);
@@ -80,7 +72,7 @@ const PostForm = ({ onPostCreated }) => {
       toast.success('Yeni bir kırık parça paylaşıldı.');
     } catch (error) {
       console.error('Paylaşım hatası:', error);
-      toast.error(error.message);
+      toast.error(error.response?.data?.error || error.message || 'Paylaşım yapılamadı');
     } finally {
       setLoading(false);
     }

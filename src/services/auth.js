@@ -1,6 +1,4 @@
-import { API_URL } from './apiConfig';
-
-
+import apiClient from './apiClient';
 
 const triggerAuthChange = () => {
     window.dispatchEvent(new Event('auth-change'));
@@ -25,27 +23,24 @@ export const isBilgeUser = (user) => {
 };
 
 export const loginUser = async (email, password) => {
-    const response = await fetch(`${API_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Giriş yapılamadı');
-    localStorage.setItem('user', JSON.stringify(data));
-    triggerAuthChange();
-    return data;
+    try {
+        const response = await apiClient.post('/auth/login', { email, password });
+        const data = response.data;
+        localStorage.setItem('user', JSON.stringify(data));
+        triggerAuthChange();
+        return data;
+    } catch (error) {
+        throw new Error(error.response?.data?.error || error.message || 'Giriş yapılamadı', { cause: error });
+    }
 };
 
 export const registerUser = async (email, password, ad) => {
-    const response = await fetch(`${API_URL}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, ad })
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Kayıt yapılamadı');
-    return data;
+    try {
+        const response = await apiClient.post('/auth/register', { email, password, ad });
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.error || error.message || 'Kayıt yapılamadı', { cause: error });
+    }
 };
 
 export const logoutUser = async () => {

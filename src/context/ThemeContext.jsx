@@ -1,7 +1,8 @@
-import React, { createContext, useState, useMemo, useEffect } from 'react';
+import { createContext, useState, useMemo, useEffect } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const ThemeContext = createContext();
 
 export const ThemeContextProvider = ({ children }) => {

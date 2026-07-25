@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, Box, Typography, IconButton, Slider, Button } from '@mui/material';
 import { Close as CloseIcon, PlayArrow as PlayIcon, Pause as PauseIcon, VolumeUp as VolumeUpIcon } from '@mui/icons-material';
 
@@ -30,11 +30,6 @@ export default function MeditationModal({ open, onClose }) {
 
   // Audio Ayarları ve Güncellemeleri
   useEffect(() => {
-    audioRef.current.loop = true;
-    audioRef.current.volume = volume;
-  }, []);
-
-  useEffect(() => {
     audioRef.current.pause();
     audioRef.current = new Audio(selectedSound.url);
     audioRef.current.loop = true;
@@ -42,11 +37,7 @@ export default function MeditationModal({ open, onClose }) {
     if (isPlaying) {
       audioRef.current.play().catch(err => console.log('Audio çalma hatası:', err));
     }
-  }, [selectedSound]);
-
-  useEffect(() => {
-    audioRef.current.volume = volume;
-  }, [volume]);
+  }, [selectedSound, isPlaying, volume]);
 
   const handlePlayPause = () => {
     if (isPlaying) {
@@ -57,35 +48,39 @@ export default function MeditationModal({ open, onClose }) {
     setIsPlaying(!isPlaying);
   };
 
+  const startBreathing = () => {
+    setCurrentStep(0);
+    setSecondsLeft(4);
+    setIsBreathingActive(true);
+  };
+
+  const stopBreathing = () => {
+    setIsBreathingActive(false);
+    setCurrentStep(0);
+    setSecondsLeft(4);
+  };
+
   const handleClose = () => {
     audioRef.current.pause();
     setIsPlaying(false);
-    setIsBreathingActive(false);
+    stopBreathing();
     onClose();
   };
 
   // Nefes egzersizi döngüsü
   useEffect(() => {
-    let interval = null;
-    if (isBreathingActive) {
-      interval = setInterval(() => {
-        setSecondsLeft((prev) => {
-          if (prev <= 1) {
-            // Sonraki adıma geç
-            setCurrentStep((prevStep) => {
-              const nextStep = (prevStep + 1) % BREATH_STEPS.length;
-              setSecondsLeft(BREATH_STEPS[nextStep].duration);
-              return nextStep;
-            });
-            return 4;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      setCurrentStep(0);
-      setSecondsLeft(4);
-    }
+    if (!isBreathingActive) return;
+
+    const interval = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          setCurrentStep((prevStep) => (prevStep + 1) % BREATH_STEPS.length);
+          return 4;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
     return () => clearInterval(interval);
   }, [isBreathingActive]);
 
@@ -164,7 +159,7 @@ export default function MeditationModal({ open, onClose }) {
               </Typography>
               <Button 
                 variant="outlined" 
-                onClick={() => setIsBreathingActive(true)}
+                onClick={startBreathing}
                 sx={{ 
                   borderColor: '#D4AF37', 
                   color: '#D4AF37', 
@@ -182,7 +177,7 @@ export default function MeditationModal({ open, onClose }) {
         {isBreathingActive && (
           <Button 
             size="small" 
-            onClick={() => setIsBreathingActive(false)}
+            onClick={stopBreathing}
             sx={{ color: 'rgba(255,255,255,0.4)', textTransform: 'none' }}
           >
             Egzersizi Durdur

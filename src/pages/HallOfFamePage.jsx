@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Box, Typography, Container } from '@mui/material';
 import KintsugiCard from '../components/kintsugi/KintsugiCard';
-import { API_URL } from '../services/apiConfig';
+import apiClient from '../services/apiClient';
 
 function HallOfFamePage() {
   const [posts, setPosts] = useState([]);
@@ -9,21 +9,22 @@ function HallOfFamePage() {
 
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
-  const fetchPosts = async () => {
-    try {
-      const response = await fetch(`${API_URL}/posts?userId=${currentUser.email}&repaired=true`);
-      const data = await response.json();
-      setPosts(data);
-    } catch (error) {
-      console.error('Yükleme hatası:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    let isCancelled = false;
+    const fetchPosts = async () => {
+      try {
+        const response = await apiClient.get('/posts', { params: { userId: currentUser.email, repaired: true } });
+        if (!isCancelled) setPosts(response.data);
+      } catch (error) {
+        console.error('Yükleme hatası:', error);
+      } finally {
+        if (!isCancelled) setLoading(false);
+      }
+    };
+
     fetchPosts();
-  }, []);
+    return () => { isCancelled = true; };
+  }, [currentUser.email]);
 
   return (
     <Container maxWidth="md" sx={{ py: 6 }}>

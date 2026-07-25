@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Box, Typography, Container } from '@mui/material';
 import KintsugiCard from '../components/kintsugi/KintsugiCard';
 import PostForm from '../components/feed/PostForm';
-import { API_URL } from '../services/apiConfig';
+import apiClient from '../services/apiClient';
 
 function HomePage() {
   const [posts, setPosts] = useState([]);
@@ -11,21 +11,22 @@ function HomePage() {
   // Mevcut kullanıcıyı al
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
-  const fetchPosts = async () => {
-    try {
-      const response = await fetch(`${API_URL}/posts?userId=${currentUser.email}`);
-      const data = await response.json();
-      setPosts(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error('Yükleme hatası:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    let isCancelled = false;
+    const fetchPosts = async () => {
+      try {
+        const response = await apiClient.get('/posts', { params: { userId: currentUser.email } });
+        if (!isCancelled) setPosts(Array.isArray(response.data) ? response.data : []);
+      } catch (error) {
+        console.error('Yükleme hatası:', error);
+      } finally {
+        if (!isCancelled) setLoading(false);
+      }
+    };
+
     fetchPosts();
-  }, []);
+    return () => { isCancelled = true; };
+  }, [currentUser.email]);
 
   const handlePostCreated = (newPost) => {
     setPosts([newPost, ...posts]);

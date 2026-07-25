@@ -12,13 +12,18 @@ const apiClient = axios.create({
 // Request Interceptor: Inject JWT token strictly for local API requests
 apiClient.interceptors.request.use(
   (config) => {
+    // If sending FormData (e.g. image uploads), let browser set Content-Type header with boundary
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
+
     const userStr = localStorage.getItem('user');
     if (userStr) {
       try {
         const user = JSON.parse(userStr);
         // Only attach token if the request is destined for our own backend API
         // Checks if path is relative or starts with baseURL to prevent token leak
-        const isLocalApi = !config.url.startsWith('http') || config.url.startsWith(API_URL);
+        const isLocalApi = !config.url || !config.url.startsWith('http') || config.url.startsWith(API_URL);
         if (user && user.token && isLocalApi) {
           config.headers['Authorization'] = `Bearer ${user.token}`;
         }
@@ -44,8 +49,10 @@ apiClient.interceptors.response.use(
       localStorage.removeItem('user');
       // Dispatch event so socket and UI updates
       window.dispatchEvent(new Event('auth-change'));
-      // Redirect to login page
-      window.location.href = '/login';
+      // Redirect to login page if not already on auth pages
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

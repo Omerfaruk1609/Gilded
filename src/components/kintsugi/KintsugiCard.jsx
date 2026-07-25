@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Box, TextField, IconButton, Typography, Collapse, Button, Tooltip, useTheme } from '@mui/material';
-import { Send as SendIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 import { isAdminUser } from '../../services/auth';
-import { API_URL, API_BASE_URL } from '../../services/apiConfig';
+import { API_BASE_URL } from '../../services/apiConfig';
+import apiClient from '../../services/apiClient';
 import '../../css/kintsugi.css';
 
 const CommentItem = ({ 
@@ -158,21 +158,6 @@ const CommentItem = ({
   );
 };
 
-const buildCommentTree = (flatComments) => {
-  if (!Array.isArray(flatComments)) return [];
-  const map = {};
-  flatComments.forEach(c => map[c.id] = { ...c, children: [] });
-  const roots = [];
-  flatComments.forEach(c => {
-    if (c.parent_id && map[c.parent_id]) {
-      map[c.parent_id].children.push(map[c.id]);
-    } else {
-      roots.push(map[c.id]);
-    }
-  });
-  return roots;
-};
-
 const KintsugiCard = ({ id, content, image_url, mood, post_type = 'normal', author_id, author_name, author_role, is_anonymous, initialSupport = 0, initialHasSupported = 0, onDelete }) => {
   const navigate = useNavigate();
   const theme = useTheme();
@@ -190,18 +175,10 @@ const KintsugiCard = ({ id, content, image_url, mood, post_type = 'normal', auth
     if (wisdomLoading) return;
     setWisdomLoading(true);
     try {
-      const res = await fetch(`${API_URL}/posts/${id}/philosopher-wisdom`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setWisdom(data);
-      } else {
-        toast.error('Bilgelik öğüdü alınamadı.');
-      }
-    } catch (err) {
-      toast.error('Bağlantı hatası oluştu.');
+      const res = await apiClient.post(`/posts/${id}/philosopher-wisdom`);
+      setWisdom(res.data);
+    } catch {
+      toast.error('Bilgelik öğüdü alınamadı.');
     } finally {
       setWisdomLoading(false);
     }
@@ -214,12 +191,10 @@ const KintsugiCard = ({ id, content, image_url, mood, post_type = 'normal', auth
   const handleDeletePost = async () => {
     if (!window.confirm('Bu parçayı sonsuza dek silmek istiyor musun?')) return;
     try {
-      const res = await fetch(`${API_URL}/posts/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        toast.success('Parça silindi.');
-        if (onDelete) onDelete(id);
-      }
-    } catch (err) {
+      await apiClient.delete(`/posts/${id}`);
+      toast.success('Parça silindi.');
+      if (onDelete) onDelete(id);
+    } catch {
       toast.error('Silme hatası.');
     }
   };
@@ -227,14 +202,11 @@ const KintsugiCard = ({ id, content, image_url, mood, post_type = 'normal', auth
   const handleDeleteComment = async (commentId) => {
     if (!window.confirm('Bu mesajı silmek istiyor musun?')) return;
     try {
-      const res = await fetch(`${API_URL}/comments/${commentId}`, { method: 'DELETE' });
-      if (res.ok) {
-        const updatedRes = await fetch(`${API_URL}/posts/${id}/comments?userId=${currentUser.email}`);
-        const updatedData = await updatedRes.json();
-        setComments(updatedData);
-        toast.success('Mesaj silindi.');
-      }
-    } catch (err) {
+      await apiClient.delete(`/comments/${commentId}`);
+      const updatedRes = await apiClient.get(`/posts/${id}/comments`, { params: { userId: currentUser.email } });
+      setComments(updatedRes.data);
+      toast.success('Mesaj silindi.');
+    } catch {
       toast.error('Silme hatası.');
     }
   };
@@ -245,18 +217,16 @@ const KintsugiCard = ({ id, content, image_url, mood, post_type = 'normal', auth
   useEffect(() => {
     const fetchComments = async () => {
       try {
-        const res = await fetch(`${API_URL}/posts/${id}/comments?userId=${currentUser.email}`);
-        const data = await res.json();
-        setComments(data);
+        const res = await apiClient.get(`/posts/${id}/comments`, { params: { userId: currentUser.email } });
+        setComments(res.data);
       } catch (err) {
         console.error('Yorum yükleme hatası:', err);
       }
     };
     fetchComments();
-  }, [id]);
+  }, [id, currentUser.email]);
 
   const triggerGoldConfetti = (isMassive = false) => {
-    const scalar = isMassive ? 2 : 1;
     const defaults = {
       spread: 360,
       ticks: isMassive ? 100 : 50,
@@ -291,13 +261,8 @@ const KintsugiCard = ({ id, content, image_url, mood, post_type = 'normal', auth
     if (hasSupported || loading) return;
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/posts/${id}/support`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: currentUser.email }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
+      const response = await apiClient.post(`/posts/${id}/support`, { user_id: currentUser.email });
+      const data = response.data;
       
       const prevCount = supportCount;
       setSupportCount(data.support_count);
@@ -312,7 +277,7 @@ const KintsugiCard = ({ id, content, image_url, mood, post_type = 'normal', auth
         toast.success('Altın dikiş başarıyla atıldı!', { icon: '✨' });
       }
     } catch (error) {
-      toast.error(error.message);
+      toast.error(error.response?.data?.error || error.message || 'Dikiş atılamadı');
     } finally {
       setLoading(false);
     }
@@ -320,34 +285,20 @@ const KintsugiCard = ({ id, content, image_url, mood, post_type = 'normal', auth
 
   const handleGoldLeaf = async (commentId) => {
     try {
-      const res = await fetch(`${API_URL}/comments/${commentId}/gold-leaf`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: currentUser.email })
-      });
-      if (res.ok) {
-        toast.success('Altın yaprak iliştirildi ✨');
-        const updatedRes = await fetch(`${API_URL}/posts/${id}/comments?userId=${currentUser.email}`);
-        const updatedData = await updatedRes.json();
-        setComments(updatedData);
-      }
-    } catch (err) {
+      await apiClient.post(`/comments/${commentId}/gold-leaf`, { user_id: currentUser.email });
+      toast.success('Altın yaprak iliştirildi ✨');
+      const updatedRes = await apiClient.get(`/posts/${id}/comments`, { params: { userId: currentUser.email } });
+      setComments(updatedRes.data);
+    } catch {
       toast.error('Hata oluştu');
     }
   };
 
   const handleVote = async (commentId, type) => {
     try {
-      const res = await fetch(`${API_URL}/comments/${commentId}/vote`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type })
-      });
-      if (res.ok) {
-        const updatedData = await res.json();
-        setComments(updatedData);
-      }
-    } catch (err) {
+      const res = await apiClient.post(`/comments/${commentId}/vote`, { type });
+      setComments(res.data);
+    } catch {
       toast.error('Oylama hatası.');
     }
   };
@@ -358,19 +309,14 @@ const KintsugiCard = ({ id, content, image_url, mood, post_type = 'normal', auth
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/posts/${id}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          content: newComment,
-          author_id: currentUser.email,
-          parent_id: parentId,
-          is_anonymous: true
-        }),
+      const response = await apiClient.post(`/posts/${id}/comments`, { 
+        content: newComment,
+        author_id: currentUser.email,
+        parent_id: parentId,
+        is_anonymous: true
       });
       
-      const data = await response.json();
-      setComments(data);
+      setComments(response.data);
       setNewComment('');
       setReplyingTo(null);
       setShowComments(true);

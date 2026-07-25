@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Box, Typography, Button, CircularProgress } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import KintsugiCard from '../components/kintsugi/KintsugiCard';
-import { API_URL } from '../services/apiConfig';
+import apiClient from '../services/apiClient';
 
 const PostDetailPage = () => {
   const { id } = useParams();
@@ -17,21 +17,17 @@ const PostDetailPage = () => {
   useEffect(() => {
     const fetchPost = async () => {
       try {
-        const response = await fetch(`${API_URL}/posts/${id}?userId=${currentUser.email}`);
-        if (!response.ok) {
-          throw new Error('Post bulunamadı');
-        }
-        const data = await response.json();
-        setPost(data);
+        const response = await apiClient.get(`/posts/${id}`, { params: { userId: currentUser.email } });
+        setPost(response.data);
       } catch (err) {
-        setError(err.message);
+        setError(err.response?.data?.error || err.message || 'Post bulunamadı');
       } finally {
         setLoading(false);
       }
     };
 
     fetchPost();
-  }, [id]);
+  }, [id, currentUser.email]);
 
   const handlePostDelete = () => {
     navigate('/');

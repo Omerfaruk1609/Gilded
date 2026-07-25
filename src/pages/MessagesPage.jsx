@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Box, Container, Paper, Typography, Avatar, TextField, IconButton, List, ListItem, ListItemAvatar, ListItemText, Divider, Badge } from '@mui/material';
+import { useState, useEffect, useRef } from 'react';
+import { Box, Container, Paper, Typography, Avatar, TextField, IconButton, List, ListItem, ListItemAvatar, ListItemText } from '@mui/material';
 import { Send as SendIcon, Chat as ChatIcon } from '@mui/icons-material';
 import { useSearchParams } from 'react-router-dom';
 import { useSocket } from '../context/SocketContext';
-import { API_URL } from '../services/apiConfig';
+import apiClient from '../services/apiClient';
 import toast from 'react-hot-toast';
 
 function MessagesPage() {
@@ -15,6 +15,7 @@ function MessagesPage() {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [contactsTrigger, setContactsTrigger] = useState(0);
   
   const messagesEndRef = useRef(null);
 
@@ -22,60 +23,57 @@ function MessagesPage() {
   const initialChatEmail = searchParams.get('chat');
 
   // Kişi listesini yükle (Takip edilen ve takip edenler)
-  const fetchContacts = async () => {
-    try {
-      const res = await fetch(`${API_URL}/users/${currentUser.email}/network`);
-      if (res.ok) {
-        const data = await res.json();
+  useEffect(() => {
+    let isCancelled = false;
+    const loadContacts = async () => {
+      try {
+        const res = await apiClient.get(`/users/${currentUser.email}/network`);
+        const data = res.data;
         
-        // Takipçi ve takip edilenleri birleştir ve benzersiz kişileri bul
         const allUsers = [...data.followers, ...data.following];
         const uniqueContacts = Array.from(new Map(allUsers.map(item => [item.email, item])).values());
-        
-        // Kendimizi listeden çıkar (güvenlik önlemi)
         const filteredContacts = uniqueContacts.filter(c => c.email !== currentUser.email);
-        setContacts(filteredContacts);
+        
+        if (!isCancelled) {
+          setContacts(filteredContacts);
 
-        // Eğer URL'de başlangıç sohbeti varsa onu seç
-        if (initialChatEmail) {
-          const contact = filteredContacts.find(c => c.email === initialChatEmail);
-          if (contact) {
-            setSelectedContact(contact);
-          } else {
-            // Ağda yoksa bile en azından isimsiz sohbet başlatabilmek için geçici nesne oluştur
-            setSelectedContact({ email: initialChatEmail, ad: initialChatEmail.split('@')[0], role: 'user' });
+          if (initialChatEmail) {
+            const contact = filteredContacts.find(c => c.email === initialChatEmail);
+            if (contact) {
+              setSelectedContact(contact);
+            } else {
+              setSelectedContact({ email: initialChatEmail, ad: initialChatEmail.split('@')[0], role: 'user' });
+            }
           }
         }
+      } catch (err) {
+        console.error('Kişiler yüklenirken hata oluştu:', err);
       }
-    } catch (err) {
-      console.error('Kişiler yüklenirken hata oluştu:', err);
-    }
-  };
+    };
+
+    loadContacts();
+    return () => { isCancelled = true; };
+  }, [currentUser.email, initialChatEmail, contactsTrigger]);
 
   // Mesaj geçmişini yükle
-  const fetchMessages = async (otherEmail) => {
-    try {
-      const res = await fetch(`${API_URL}/messages/${otherEmail}`);
-      if (res.ok) {
-        const data = await res.json();
-        setMessages(data);
+  useEffect(() => {
+    if (!selectedContact) return;
+    let isCancelled = false;
+    const loadMessages = async () => {
+      try {
+        const res = await apiClient.get(`/messages/${selectedContact.email}`);
+        if (!isCancelled) {
+          setMessages(res.data);
+        }
+      } catch (err) {
+        console.error('Mesajlar yüklenirken hata oluştu:', err);
       }
-    } catch (err) {
-      console.error('Mesajlar yüklenirken hata oluştu:', err);
-    }
-  };
+    };
 
-  useEffect(() => {
-    fetchContacts();
-  }, [currentUser.email, initialChatEmail]);
-
-  useEffect(() => {
-    if (selectedContact) {
-      fetchMessages(selectedContact.email);
-      // URL'deki query parametresini güncelle
-      setSearchParams({ chat: selectedContact.email });
-    }
-  }, [selectedContact]);
+    loadMessages();
+    setSearchParams({ chat: selectedContact.email });
+    return () => { isCancelled = true; };
+  }, [selectedContact, setSearchParams]);
 
   // Her yeni mesajda alta kaydır
   useEffect(() => {
@@ -86,17 +84,14 @@ function MessagesPage() {
   useEffect(() => {
     if (socket) {
       const handleNewMessage = (msg) => {
-        // Eğer mesaj şu an açık olan sohbetten geldiyse ekrana ekle
         if (selectedContact && (msg.sender_id === selectedContact.email || msg.receiver_id === selectedContact.email)) {
           setMessages(prev => [...prev, msg]);
         } else {
-          // Başka birinden geldiyse bildirim fırlat
           toast.success(`${msg.sender_name || 'Bir Ruh'} size yeni bir mesaj gönderdi ✨`, {
             duration: 3000,
             position: 'top-right'
           });
-          // Kişi listesini güncelle (belki yeni bir kişi mesaj attıysa)
-          fetchContacts();
+          setContactsTrigger(prev => prev + 1);
         }
       };
 
@@ -112,25 +107,15 @@ function MessagesPage() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          receiverEmail: selectedContact.email,
-          content: newMessage.trim()
-        })
+      const res = await apiClient.post('/messages', {
+        receiverEmail: selectedContact.email,
+        content: newMessage.trim()
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        setMessages(prev => [...prev, data]);
-        setNewMessage('');
-      } else {
-        const errData = await res.json();
-        toast.error(errData.error || 'Mesaj gönderilemedi');
-      }
+      setMessages(prev => [...prev, res.data]);
+      setNewMessage('');
     } catch (err) {
-      toast.error('Mesaj gönderilirken hata oluştu');
+      toast.error(err.response?.data?.error || 'Mesaj gönderilemedi');
     } finally {
       setLoading(false);
     }

@@ -1,10 +1,11 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import { API_BASE_URL } from '../services/apiConfig';
 import toast from 'react-hot-toast';
 
 const SocketContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useSocket = () => useContext(SocketContext);
 
 export const SocketProvider = ({ children }) => {
@@ -21,37 +22,39 @@ export const SocketProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    if (user && user.email) {
-      const newSocket = io(API_BASE_URL, {
-        auth: {
-          token: user.token
+    if (!user || !user.email) {
+      return;
+    }
+
+    const newSocket = io(API_BASE_URL, {
+      auth: {
+        token: user.token
+      }
+    });
+
+    newSocket.emit('join');
+
+    newSocket.on('new_notification', (data) => {
+      toast.success(data.message, {
+        icon: '✨',
+        duration: 4000,
+        position: 'top-right',
+        style: {
+          background: '#1a1a1a',
+          color: '#D4AF37',
+          border: '1px solid #D4AF37'
         }
       });
+    });
+
+    newSocket.on('connect', () => {
       setSocket(newSocket);
+    });
 
-      newSocket.emit('join');
-
-      newSocket.on('new_notification', (data) => {
-        toast.success(data.message, {
-          icon: '✨',
-          duration: 4000,
-          position: 'top-right',
-          style: {
-            background: '#1a1a1a',
-            color: '#D4AF37',
-            border: '1px solid #D4AF37'
-          }
-        });
-      });
-
-      return () => {
-        newSocket.close();
-        setSocket(null);
-      };
-    } else {
-      setSocket(null);
-    }
-  }, [user?.email]);
+    return () => {
+      newSocket.close();
+    };
+  }, [user]);
 
   return (
     <SocketContext.Provider value={socket}>

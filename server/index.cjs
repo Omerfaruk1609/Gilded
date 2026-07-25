@@ -2,20 +2,34 @@ const express = require('express');
 const cors = require('cors');
 const http = require('http');
 require('dotenv').config();
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const { Server } = require('socket.io');
 const db = require('./db.cjs');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
+const fs = require('fs');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const { containsProfanity } = require('./utils/moderation.cjs');
 const { analyzeComment } = require('./utils/aiModeration.cjs');
 const { generatePhilosopherWisdom } = require('./utils/philosopherBot.cjs');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'gilded-secret-key-123';
+// JWT Secret Güvenlik Kontrolü
+if (!process.env.JWT_SECRET) {
+  console.error('❌ HATA: JWT_SECRET ortam değişkeni tanımlanmamış. Güvenlik nedeniyle sunucu başlatılamıyor.');
+  process.exit(1);
+}
+const JWT_SECRET = process.env.JWT_SECRET;
+
+// Multer Upload Klasör Kontrolü
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'server/uploads/'),
+  destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) => cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname))
 });
 
@@ -39,15 +53,58 @@ const upload = multer({
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// CORS Yapılandırması
+const allowedOrigins = process.env.CORS_ORIGIN 
+  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()) 
+  : ['http://localhost:5173'];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS kısıtlaması nedeniyle bu origin isteğine izin verilmiyor.'));
+    }
+  },
+  credentials: true
+};
+
+// HTTP Header Güvenliği (Helmet)
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Rate Limiting (Brute-Force & DoS Koruması)
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Çok fazla istek gönderildi, lütfen biraz sonra tekrar deneyin.' }
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Çok fazla giriş/kayıt denemesi yapıldı, lütfen 15 dakika sonra tekrar deneyin.' }
+});
+
+app.use('/api/', globalLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
 
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
-    methods: ["GET", "POST"]
+    origin: allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
@@ -610,6 +667,15 @@ app.get('/api/notifications/:email', requireAuth, async (req, res) => {
 app.put('/api/notifications/:id/read', requireAuth, async (req, res) => {
   const { id } = req.params;
   try {
+    const notifRes = await db.query('SELECT * FROM notifications WHERE id = $1', [id]);
+    const notif = notifRes.rows[0];
+    if (!notif) {
+      return res.status(404).json({ error: 'Bildirim bulunamadı' });
+    }
+    if (notif.user_id !== req.user.email) {
+      return res.status(403).json({ error: 'Bu bildirimi değiştirme yetkiniz yok' });
+    }
+
     await db.query('UPDATE notifications SET is_read = TRUE WHERE id = $1', [id]);
     res.json({ message: 'Okundu' });
   } catch (error) {
@@ -918,6 +984,15 @@ app.post('/api/messages', requireAuth, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// Production ortamında Vite build (dist) çıktılarını statik sun ve SPA yönlendirmelerini index.html'e aktar
+if (process.env.NODE_ENV === 'production') {
+  const distPath = path.join(__dirname, '../dist');
+  app.use(express.static(distPath));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
 
 const { initDb } = require('./db.cjs');
 
