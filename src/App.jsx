@@ -1,17 +1,19 @@
+import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { Box, CircularProgress, Typography } from '@mui/material'
 import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
 
-// Pages
-import HomePage from './pages/HomePage'
-import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
-import AdminPanel from './pages/AdminPanel'
-import ProfilePage from './pages/ProfilePage'
-import HallOfFamePage from './pages/HallOfFamePage'
-import WisdomPage from './pages/WisdomPage'
-import PostDetailPage from './pages/PostDetailPage'
-import MessagesPage from './pages/MessagesPage'
+// Lazy-loaded Pages for Code-Splitting
+const HomePage = lazy(() => import('./pages/HomePage'))
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const RegisterPage = lazy(() => import('./pages/RegisterPage'))
+const AdminPanel = lazy(() => import('./pages/AdminPanel'))
+const ProfilePage = lazy(() => import('./pages/ProfilePage'))
+const HallOfFamePage = lazy(() => import('./pages/HallOfFamePage'))
+const WisdomPage = lazy(() => import('./pages/WisdomPage'))
+const PostDetailPage = lazy(() => import('./pages/PostDetailPage'))
+const MessagesPage = lazy(() => import('./pages/MessagesPage'))
 
 // Guards
 import ProtectedRoute from './components/guards/ProtectedRoute'
@@ -20,12 +22,22 @@ import AdminRoute from './components/guards/AdminRoute'
 
 import { Toaster } from 'react-hot-toast'
 
+const PageLoader = () => (
+  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+    <CircularProgress sx={{ color: '#D4AF37', mb: 2 }} />
+    <Typography variant="body2" sx={{ color: 'rgba(212,175,55,0.7)', fontStyle: 'italic', letterSpacing: 1 }}>
+      Altın dikişler işleniyor... ✨
+    </Typography>
+  </Box>
+)
+
 function App() {
   return (
     <>
       <Toaster position="top-right" toastOptions={{ style: { background: '#1e293b', color: '#fff', border: '1px solid #D4AF37' } }} />
       <Navbar />
-      <Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
         <Route
           path="/login"
           element={
@@ -100,6 +112,7 @@ function App() {
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
       <Footer />
     </>
   )

@@ -1,0 +1,22 @@
+{
+  "short_name": "Gilded",
+  "name": "Gilded - Kintsugi Space",
+  "description": "Yaralarınız, ışığın içeri girdiği yerdir. Kırıldığımız yerlerden daha güçlüyüz.",
+  "icons": [
+    {
+      "src": "/Gildedlogo.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/Gildedlogo.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "display": "standalone",
+  "orientation": "portrait"
+}

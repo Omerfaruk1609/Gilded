@@ -1,18 +1,21 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: gilded_postgres
+  gilded-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gilded_space
     restart: always
-    environment:
-      POSTGRES_DB: gilded
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:password@localhost:5432/gilded}
+      - JWT_SECRET=${JWT_SECRET:-your_super_secret_jwt_key_here}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:5000}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@gold.com}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-123456}
     volumes:
-      - pgdata:/var/lib/postgresql/data
-
-volumes:
-  pgdata:
+      - ./server/uploads:/app/server/uploads
