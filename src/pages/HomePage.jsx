@@ -113,6 +113,7 @@ function HomePage() {
               id={post.id}
               content={post.content}
               image_url={post.image_url}
+              audio_url={post.audio_url}
               mood={post.mood}
               author_id={post.author_id}
               author_name={post.author_name}

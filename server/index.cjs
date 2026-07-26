@@ -34,11 +34,14 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
-  if (allowedMimeTypes.includes(file.mimetype)) {
+  const allowedMimeTypes = [
+    'image/jpeg', 'image/png', 'image/webp',
+    'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/webm', 'audio/ogg', 'audio/m4a', 'audio/x-m4a'
+  ];
+  if (allowedMimeTypes.includes(file.mimetype) || file.mimetype.startsWith('audio/') || file.mimetype.startsWith('image/')) {
     cb(null, true);
   } else {
-    cb(new Error('Yalnızca JPEG, PNG ve WEBP formatındaki görsellere izin verilir.'), false);
+    cb(new Error('Yalnızca görsel (JPEG, PNG, WEBP) veya ses (MP3, WAV, WEBM) formatına izin verilir.'), false);
   }
 };
 
@@ -46,7 +49,7 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
+    fileSize: 10 * 1024 * 1024 // 10MB limit
   }
 });
 
@@ -135,6 +138,32 @@ io.on('connection', (socket) => {
   socket.on('join', () => {
     socket.join(socket.user.email);
     console.log(`Kullanıcı ${socket.user.email} (güvenli) odasına katıldı.`);
+  });
+
+  // Topluluk Çemberleri (Live Circles) Socket Etkinlikleri
+  socket.on('join_circle', (circleId) => {
+    socket.join(`circle_${circleId}`);
+    io.to(`circle_${circleId}`).emit('circle_user_joined', {
+      user: socket.user.email
+    });
+  });
+
+  socket.on('leave_circle', (circleId) => {
+    socket.leave(`circle_${circleId}`);
+    io.to(`circle_${circleId}`).emit('circle_user_left', {
+      user: socket.user.email
+    });
+  });
+
+  socket.on('send_circle_message', ({ circleId, text, userName }) => {
+    const msgData = {
+      id: Date.now() + Math.random(),
+      sender_email: socket.user.email,
+      sender_name: userName || socket.user.email.split('@')[0],
+      text,
+      created_at: new Date().toISOString()
+    };
+    io.to(`circle_${circleId}`).emit('new_circle_message', msgData);
   });
 
   socket.on('disconnect', () => {
@@ -369,7 +398,9 @@ app.post('/api/posts', requireAuth, (req, res, next) => {
 }, async (req, res) => {
   const { content, post_type = 'normal', category_id = null, is_anonymous = 1, mood = null } = req.body;
   const author_id = req.user.email; // JWT'den alınan kimlik
-  const image_url = req.file ? `/uploads/${req.file.filename}` : null;
+  const isAudio = req.file && (req.file.mimetype.startsWith('audio/') || ['.mp3', '.wav', '.webm', '.m4a', '.ogg'].includes(path.extname(req.file.filename).toLowerCase()));
+  const image_url = req.file && !isAudio ? `/uploads/${req.file.filename}` : null;
+  const audio_url = req.file && isAudio ? `/uploads/${req.file.filename}` : null;
   if (!content) return res.status(400).json({ error: 'İçerik gerekli' });
 
   if (containsProfanity(content)) {
@@ -397,11 +428,11 @@ app.post('/api/posts', requireAuth, (req, res, next) => {
 
     const isAnonBool = (is_anonymous === '1' || is_anonymous === 1 || is_anonymous === 'true' || is_anonymous === true);
     const insertQuery = `
-      INSERT INTO posts (content, author_id, image_url, post_type, is_anonymous, category_id, mood) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7) 
+      INSERT INTO posts (content, author_id, image_url, audio_url, post_type, is_anonymous, category_id, mood) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
       RETURNING *
     `;
-    const insertRes = await db.query(insertQuery, [content, author_id, image_url, post_type, isAnonBool, category_id ? parseInt(category_id) : null, mood]);
+    const insertRes = await db.query(insertQuery, [content, author_id, image_url, audio_url, post_type, isAnonBool, category_id ? parseInt(category_id) : null, mood]);
     res.status(201).json(insertRes.rows[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -733,6 +764,32 @@ app.post('/api/auth/login', async (req, res) => {
     );
 
     res.json({ ...userWithoutPassword, token });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Kullanıcı arama (Ruh Arama ve Keşif)
+app.get('/api/users/search', requireAuth, async (req, res) => {
+  const { q, currentUserId } = req.query;
+  if (!q || !q.trim()) return res.json([]);
+
+  const searchTerm = `%${q.trim()}%`;
+  const currentUser = currentUserId || req.user?.email;
+
+  try {
+    const query = `
+      SELECT u.id, u.email, u.ad, u.role, u.created_at,
+      (SELECT COUNT(*)::int FROM follows WHERE follower_email = u.email) as following_count,
+      (SELECT COUNT(*)::int FROM follows WHERE following_email = u.email) as follower_count,
+      EXISTS(SELECT 1 FROM follows WHERE follower_email = $2 AND following_email = u.email) as is_following
+      FROM users u
+      WHERE (LOWER(u.ad) LIKE LOWER($1) OR LOWER(u.email) LIKE LOWER($1))
+      AND u.email != $2
+      LIMIT 20
+    `;
+    const result = await db.query(query, [searchTerm, currentUser]);
+    res.json(result.rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

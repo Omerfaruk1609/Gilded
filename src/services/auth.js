@@ -58,3 +58,43 @@ export const getBadge = (stats) => {
     
     return null;
 };
+
+export const getAchievements = (stats) => {
+    const given = stats?.given || 0;
+    const received = stats?.received || 0;
+    
+    return [
+        {
+            id: 'new_soul',
+            label: 'Yeni Ruh',
+            description: 'Kintsugi sığınağına katıldın ve yolculuğuna başladın.',
+            icon: '🌑',
+            color: '#94a3b8',
+            unlocked: true
+        },
+        {
+            id: 'healer',
+            label: 'Şifa Dağıtıcı',
+            description: '10 ya da daha fazla dert hikayesine altın dikiş attın.',
+            icon: '🌱',
+            color: '#4ADE80',
+            unlocked: given >= 10
+        },
+        {
+            id: 'gold_hands',
+            label: 'Altın Eller',
+            description: '20 veya üzeri altın dikiş desteği verdin.',
+            icon: '✨',
+            color: '#D4AF37',
+            unlocked: given >= 20
+        },
+        {
+            id: 'kintsugi_master',
+            label: 'Kintsugi Ustası',
+            description: 'Hikayen 10 veya üzeri altın dikiş ile tamamen onarıldı.',
+            icon: '🏺',
+            color: '#fb923c',
+            unlocked: received >= 10
+        }
+    ];
+};

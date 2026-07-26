@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS posts (
     id SERIAL PRIMARY KEY,
     content TEXT NOT NULL,
     image_url VARCHAR(255) DEFAULT NULL,
+    audio_url VARCHAR(255) DEFAULT NULL,
     post_type VARCHAR(50) DEFAULT 'normal',
     author_id VARCHAR(255) REFERENCES users(email) ON DELETE CASCADE,
     support_count INTEGER DEFAULT 0,

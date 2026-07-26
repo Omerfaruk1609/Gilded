@@ -1,16 +1,56 @@
-import { AppBar, Box, Button, Toolbar, Typography, Avatar, IconButton } from '@mui/material'
+import { AppBar, Box, Button, Toolbar, Typography, Avatar, IconButton, TextField, Paper, List, ListItem } from '@mui/material'
+import { Search as SearchIcon } from '@mui/icons-material'
 import { Link as RouterLink, useNavigate } from 'react-router-dom'
-import { useContext, useState } from 'react'
+import { useContext, useState, useEffect } from 'react'
 import { ThemeContext } from '../../context/ThemeContext'
 import { clearStoredUser, getStoredUser, isAdminUser, logoutUser } from '../../services/auth'
 import NotificationsMenu from './NotificationsMenu'
 import MeditationModal from './MeditationModal'
+import apiClient from '../../services/apiClient'
+import toast from 'react-hot-toast'
 
 function Navbar() {
     const navigate = useNavigate()
     const user = getStoredUser()
     const { mode, toggleTheme } = useContext(ThemeContext)
     const [meditationOpen, setMeditationOpen] = useState(false)
+    const [searchQuery, setSearchQuery] = useState('')
+    const [searchResults, setSearchResults] = useState([])
+    const [searchOpen, setSearchOpen] = useState(false)
+
+    useEffect(() => {
+        const query = searchQuery.trim();
+        const timer = setTimeout(async () => {
+            if (!query) {
+                setSearchResults([]);
+                setSearchOpen(false);
+                return;
+            }
+            try {
+                const res = await apiClient.get('/users/search', {
+                    params: { q: query, currentUserId: user?.email }
+                });
+                setSearchResults(res.data);
+                setSearchOpen(true);
+            } catch (err) {
+                console.error(err);
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [searchQuery, user?.email]);
+
+    const handleFollowToggle = async (targetEmail, isFollowing) => {
+        try {
+            await apiClient.post('/users/follow', { followingEmail: targetEmail });
+            toast.success(isFollowing ? 'Takipten çıkıldı' : 'Takip edildi ✨');
+            setSearchResults((prev) =>
+                prev.map((u) => (u.email === targetEmail ? { ...u, is_following: !isFollowing } : u))
+            );
+        } catch {
+            toast.error('Takip işlemi başarısız');
+        }
+    };
 
     const handleLogout = async () => {
         try {
@@ -55,25 +95,106 @@ function Navbar() {
                             width: 'auto'
                         }}
                     />
-                    <Typography
-                        variant="h6"
-                        sx={{
-                            fontWeight: 800,
-                            letterSpacing: '0.5px',
-                            lineHeight: 1,
-                            background: 'linear-gradient(45deg, #ffd700, #ff8c00)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            fontSize: '1.1rem' // Boyut küçültüldü
-                        }}
-                    ></Typography>
                 </Box>
 
-                {/* MENÜ BUTONLARI - Soluk Gri Tonları */}
+                {/* MENÜ BUTONLARI */}
                 {user ? (
                     <>
+                        {/* RUH ARA (USER SEARCH BAR) */}
+                        <Box sx={{ position: 'relative', mr: 1, display: { xs: 'none', sm: 'block' } }}>
+                            <TextField
+                                size="small"
+                                placeholder="Ruh Ara..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                InputProps={{
+                                    startAdornment: <SearchIcon sx={{ color: '#D4AF37', fontSize: '1.1rem', mr: 0.5 }} />
+                                }}
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        bgcolor: 'rgba(255,255,255,0.03)',
+                                        color: '#fff',
+                                        borderRadius: '12px',
+                                        fontSize: '0.85rem',
+                                        height: '32px',
+                                        '& fieldset': { borderColor: 'rgba(212, 175, 55, 0.2)' },
+                                        '&:hover fieldset': { borderColor: '#D4AF37' }
+                                    }
+                                }}
+                            />
 
+                            {/* Arama Açılır Menüsü */}
+                            {searchOpen && searchResults.length > 0 && (
+                                <Paper
+                                    sx={{
+                                        position: 'absolute',
+                                        top: '38px',
+                                        left: 0,
+                                        right: 0,
+                                        minWidth: 260,
+                                        bgcolor: '#111',
+                                        border: '1px solid rgba(212, 175, 55, 0.3)',
+                                        borderRadius: '12px',
+                                        zIndex: 1300,
+                                        maxHeight: 300,
+                                        overflowY: 'auto',
+                                        boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
+                                    }}
+                                >
+                                    <List size="small" disablePadding>
+                                        {searchResults.map((searchedUser) => (
+                                            <ListItem
+                                                key={searchedUser.email}
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    py: 1,
+                                                    px: 1.5,
+                                                    borderBottom: '1px solid rgba(255,255,255,0.05)'
+                                                }}
+                                            >
+                                                <Box
+                                                    onClick={() => {
+                                                        navigate(`/profile?email=${searchedUser.email}`);
+                                                        setSearchOpen(false);
+                                                    }}
+                                                    sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', flex: 1 }}
+                                                >
+                                                    <Avatar sx={{ width: 28, height: 28, bgcolor: '#fb923c', fontSize: '0.75rem', fontWeight: 'bold' }}>
+                                                        {searchedUser.ad?.charAt(0).toUpperCase()}
+                                                    </Avatar>
+                                                    <Box>
+                                                        <Typography variant="body2" sx={{ color: '#fff', fontWeight: 600, fontSize: '0.85rem' }}>
+                                                            {searchedUser.ad}
+                                                        </Typography>
+                                                        <Typography variant="caption" sx={{ color: '#888', fontSize: '0.7rem' }}>
+                                                            {searchedUser.email}
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
 
+                                                <Button
+                                                    size="small"
+                                                    onClick={() => handleFollowToggle(searchedUser.email, searchedUser.is_following)}
+                                                    sx={{
+                                                        fontSize: '0.7rem',
+                                                        color: searchedUser.is_following ? '#aaa' : '#D4AF37',
+                                                        borderColor: searchedUser.is_following ? 'rgba(255,255,255,0.2)' : 'rgba(212,175,55,0.4)',
+                                                        textTransform: 'none',
+                                                        minWidth: 'auto',
+                                                        px: 1
+                                                    }}
+                                                    variant="outlined"
+                                                >
+                                                    {searchedUser.is_following ? 'Takipten Çık' : 'Takip Et'}
+                                                </Button>
+                                            </ListItem>
+                                        ))}
+                                    </List>
+                                </Paper>
+                            )}
+                        </Box>
 
                         {isAdminUser(user) && (
                             <Button
@@ -129,6 +250,23 @@ function Navbar() {
                             }}
                         >
                             Bilgelik Panosu
+                        </Button>
+
+                        <Button
+                            component={RouterLink}
+                            to="/circles"
+                            sx={{
+                                color: '#94a3b8',
+                                fontWeight: 500,
+                                fontSize: '0.95rem',
+                                letterSpacing: '0.5px',
+                                '&:hover': {
+                                    color: '#D4AF37',
+                                    backgroundColor: 'transparent'
+                                }
+                            }}
+                        >
+                            Çemberler ⭕
                         </Button>
 
                         <Button

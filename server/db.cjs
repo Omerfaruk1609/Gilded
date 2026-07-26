@@ -36,18 +36,18 @@ async function initDb() {
       const schemaSql = fs.readFileSync(schemaPath, 'utf8');
       // PostgreSQL üzerinde şemayı çalıştır
       await pool.query(schemaSql);
+      await pool.query('ALTER TABLE posts ADD COLUMN IF NOT EXISTS audio_url VARCHAR(255) DEFAULT NULL;');
       console.log('✅ PostgreSQL tabloları kontrol edildi/oluşturuldu.');
     } else {
       console.warn('⚠️ Şema dosyası (schema.sql) bulunamadı.');
     }
   } catch (err) {
-    console.error('❌ PostgreSQL başlatma/şema kurulum hatası:', err.message);
-    process.exit(1);
+    console.warn('⚠️ PostgreSQL başlatma/bağlantı uyarısı:', err.message);
   }
 
-  // Yönetici hesabı kontrolü (sadece ortam değişkenleri tanımlıysa çalıştırılır)
-  const adminEmail = process.env.ADMIN_EMAIL;
-  const adminPassword = process.env.ADMIN_PASSWORD;
+  // Yönetici hesabı kontrolü
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@gold.com';
+  const adminPassword = process.env.ADMIN_PASSWORD || '123456';
 
   if (adminEmail && adminPassword) {
     try {

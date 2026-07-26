@@ -169,11 +169,11 @@ const PostForm = ({ onPostCreated }) => {
                 '&:hover': { borderColor: '#D4AF37', color: '#D4AF37' }
               }}
             >
-              Resim
+              Resim/Ses
               <input
                 type="file"
                 hidden
-                accept="image/*"
+                accept="image/*,audio/*"
                 onChange={(e) => {
                   if (e.target.files[0]) setImage(e.target.files[0]);
                 }}

@@ -4,9 +4,9 @@ import { Close as CloseIcon, PlayArrow as PlayIcon, Pause as PauseIcon, VolumeUp
 
 const AMBIENT_SOUNDS = [
   { id: 'zen', name: 'Zen Lo-Fi', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3' },
-  { id: 'rain', name: 'Yağmur Sesi', url: 'https://actions.google.com/sounds/v1/weather/rain_heavy_loud.ogg' },
-  { id: 'ocean', name: 'Okyanus Dalgaları', url: 'https://actions.google.com/sounds/v1/weather/ocean_waves.ogg' },
-  { id: 'forest', name: 'Orman Rüzgarı', url: 'https://actions.google.com/sounds/v1/weather/crickets.ogg' }
+  { id: 'rain', name: 'Yağmur Sesi', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
+  { id: 'ocean', name: 'Okyanus Dalgaları', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
+  { id: 'forest', name: 'Orman Rüzgarı', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' }
 ];
 
 const BREATH_STEPS = [

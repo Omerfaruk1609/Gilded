@@ -14,6 +14,7 @@ const HallOfFamePage = lazy(() => import('./pages/HallOfFamePage'))
 const WisdomPage = lazy(() => import('./pages/WisdomPage'))
 const PostDetailPage = lazy(() => import('./pages/PostDetailPage'))
 const MessagesPage = lazy(() => import('./pages/MessagesPage'))
+const CirclesPage = lazy(() => import('./pages/CirclesPage'))
 
 // Guards
 import ProtectedRoute from './components/guards/ProtectedRoute'
@@ -107,6 +108,14 @@ function App() {
           element={
             <ProtectedRoute>
               <MessagesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/circles"
+          element={
+            <ProtectedRoute>
+              <CirclesPage />
             </ProtectedRoute>
           }
         />

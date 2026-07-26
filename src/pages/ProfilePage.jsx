@@ -4,7 +4,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import KintsugiCard from '../components/kintsugi/KintsugiCard';
 import apiClient from '../services/apiClient';
-import { getBadge } from '../services/auth';
+import { getBadge, getAchievements } from '../services/auth';
 
 function ProfilePage() {
   const [posts, setPosts] = useState([]);
@@ -159,6 +159,41 @@ function ProfilePage() {
             </Paper>
           </Grid>
         </Grid>
+
+        {/* BAŞARIMLAR VE ROZETLER VİTRİNİ */}
+        <Box sx={{ mt: 4, width: '100%', maxWidth: 700 }}>
+          <Typography variant="subtitle1" sx={{ color: '#D4AF37', fontWeight: 700, mb: 1.5, textTransform: 'uppercase', letterSpacing: 1 }}>
+            Kintsugi Başarımları ✨
+          </Typography>
+          <Grid container spacing={2}>
+            {getAchievements(stats).map((item) => (
+              <Grid item xs={12} sm={6} key={item.id}>
+                <Paper
+                  sx={{
+                    p: 2,
+                    bgcolor: item.unlocked ? 'rgba(212, 175, 55, 0.08)' : 'rgba(255,255,255,0.02)',
+                    border: item.unlocked ? `1px solid ${item.color}` : '1px solid rgba(255,255,255,0.05)',
+                    borderRadius: '16px',
+                    opacity: item.unlocked ? 1 : 0.4,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5
+                  }}
+                >
+                  <Box sx={{ fontSize: '1.8rem' }}>{item.icon}</Box>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: item.unlocked ? '#fff' : '#888' }}>
+                      {item.label} {item.unlocked && '✓'}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#aaa', display: 'block', fontSize: '0.75rem' }}>
+                      {item.description}
+                    </Typography>
+                  </Box>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
       </Box>
 
       <Box sx={{ borderBottom: 1, borderColor: 'rgba(212,175,55,0.2)', mb: 4 }}>

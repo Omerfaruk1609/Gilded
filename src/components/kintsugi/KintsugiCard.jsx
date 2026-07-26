@@ -158,7 +158,7 @@ const CommentItem = ({
   );
 };
 
-const KintsugiCard = ({ id, content, image_url, mood, post_type = 'normal', author_id, author_name, author_role, is_anonymous, initialSupport = 0, initialHasSupported = 0, onDelete }) => {
+const KintsugiCard = ({ id, content, image_url, audio_url, mood, post_type = 'normal', author_id, author_name, author_role, is_anonymous, initialSupport = 0, initialHasSupported = 0, onDelete }) => {
   const navigate = useNavigate();
   const theme = useTheme();
   const [supportCount, setSupportCount] = useState(initialSupport);
@@ -451,6 +451,18 @@ const KintsugiCard = ({ id, content, image_url, mood, post_type = 'normal', auth
                 boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
               }} 
             />
+          </Box>
+        )}
+
+        {audio_url && (
+          <Box sx={{ mt: 2, mb: 2, p: 1.5, bgcolor: 'rgba(212,175,55,0.05)', borderRadius: '12px', border: '1px solid rgba(212,175,55,0.2)' }}>
+            <Typography variant="caption" sx={{ color: '#D4AF37', display: 'block', mb: 0.5, fontWeight: 700 }}>
+              🎙️ Sesli Dert Günlüğü
+            </Typography>
+            <audio controls style={{ width: '100%', borderRadius: '8px' }}>
+              <source src={`${API_BASE_URL}${audio_url}`} />
+              Tarayıcınız ses oynatmayı desteklemiyor.
+            </audio>
           </Box>
         )}
         
