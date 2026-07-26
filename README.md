@@ -114,9 +114,11 @@ Veritabanı başarıyla bağlandığında, backend sunucusu otomatik olarak aşa
 ## 🛤️ Roadmap & Gelecek Planları
 - [x] **Yerel Moderasyon:** Kendi kendine yeten küfür filtresi.
 - [x] **Gelişmiş Bilge Rolü:** Kişisel grup yönetimi ve takipçi sayacı.
-- [ ] **Meditasyon Modu:** Arka planda çalan lo-fi sesler ve nefes egzersizleri.
-- [ ] **Yapay Zeka Destekli Dert Analizi:** Paylaşılan dertlere uygun kadim filozoflardan alıntılar öneren bot.
-- [ ] **Mobil Native Uygulama:** React Native ile tam performanslı mobil deneyim.
+- [x] **Meditasyon Modu:** Arka planda çalan lo-fi sesler ve 4-4-4-4 kutu nefes egzersizi.
+- [x] **Yapay Zeka Destekli Dert Analizi:** Google Gemini AI ve yerel filozof kütüphanesi ile dertlere özel kadim tavsiyeler.
+- [ ] **Docker & Cloud Deployment:** Tek komutla prodüksiyon kurulumu ve konteynerleştirme.
+- [ ] **PWA (Progressive Web App):** Mobil ve masaüstüne uygulama olarak yüklenebilme.
+- [ ] **Mobil Native Uygulama:** React Native ile iOS & Android için tam performanslı mobil deneyim.
 
 ---
 
