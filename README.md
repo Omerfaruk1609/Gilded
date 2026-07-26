@@ -114,11 +114,15 @@ Veritabanı başarıyla bağlandığında, backend sunucusu otomatik olarak aşa
 ## 🛤️ Roadmap & Gelecek Planları
 - [x] **Yerel Moderasyon:** Kendi kendine yeten küfür filtresi.
 - [x] **Gelişmiş Bilge Rolü:** Kişisel grup yönetimi ve takipçi sayacı.
-- [x] **Meditasyon Modu:** Arka planda çalan lo-fi sesler ve 4-4-4-4 kutu nefes egzersizi.
-- [x] **Yapay Zeka Destekli Dert Analizi:** Google Gemini AI ve yerel filozof kütüphanesi ile dertlere özel kadim tavsiyeler.
-- [ ] **Docker & Cloud Deployment:** Tek komutla prodüksiyon kurulumu ve konteynerleştirme.
-- [ ] **PWA (Progressive Web App):** Mobil ve masaüstüne uygulama olarak yüklenebilme.
-- [ ] **Mobil Native Uygulama:** React Native ile iOS & Android için tam performanslı mobil deneyim.
+- [x] **Meditasyon Modu:** Arka planda çalan sesler ve 4-4-4-4 kutu nefes egzersizi.
+- [x] **Docker & Cloud Deployment:** Multi-stage Dockerfile ve docker-compose kurulumu.
+- [x] **PWA (Progressive Web App):** Service Worker ve mobil yüklenebilirlik.
+- [x] **React Code-Splitting:** Dynamic lazy imports ve Suspense yükleyici.
+- [x] **Ruh Arama ve Keşif (User Search):** İsim/e-posta ile kullanıcı arama ve tek tıkla takip.
+- [x] **Kintsugi Başarım Rozetleri:** Gamification ve profilde sergilenen rozetler.
+- [x] **Sesli Dert Günlüğü (Voice Notes):** Ses dosyası yükleme ve oynatıcı.
+- [x] **Topluluk Canlı Çemberleri (Live Circles):** Socket.io tabanlı canlı grup odaları.
+- [ ] **Mobil Native Uygulama:** React Native ile iOS & Android uygulaması.
 
 ---
 
