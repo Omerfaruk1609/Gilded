@@ -3,22 +3,31 @@ import { Box, Typography, Container, Grid, Paper, Avatar, Button } from '@mui/ma
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import KintsugiCard from '../components/kintsugi/KintsugiCard';
+import BreadcrumbsNav from '../components/layout/BreadcrumbsNav';
 import apiClient from '../services/apiClient';
-import { getBadge, getAchievements } from '../services/auth';
+import { getBadge, getAchievements, getStoredUser } from '../services/auth';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 function ProfilePage() {
   const [posts, setPosts] = useState([]);
   const [stats, setStats] = useState({ received: 0, given: 0 });
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState(0); // 0: Hikayeler, 1: Yolculuk
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const [selectedTab, setSelectedTab] = useState(0);
+  const activeTab = tabParam === 'gallery' ? 1 : selectedTab;
   const [network, setNetwork] = useState({ followers: [], following: [], is_following: false });
 
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const currentUser = getStoredUser() || {};
 
   const targetEmail = searchParams.get('email') || currentUser.email;
   const isOwnProfile = targetEmail === currentUser.email;
+
+  useDocumentTitle(
+    isOwnProfile ? 'Profilim & Altın Dikişlerim' : `${targetEmail || 'Kullanıcı'} Profili`,
+    'Kintsugi profil bilgileri, kazanılan altın dikişler ve kişisel yolculuk.'
+  );
 
   useEffect(() => {
     if (!targetEmail) return;
@@ -59,8 +68,11 @@ function ProfilePage() {
     }
   };
 
+  const repairedPosts = posts.filter(p => p.is_repaired || p.support_count >= 10);
+
   return (
     <Container maxWidth="md" sx={{ py: 6 }}>
+      <BreadcrumbsNav items={[{ label: isOwnProfile ? 'Profilim' : `${targetEmail?.split('@')[0]} Profili` }]} />
       {/* Profil Başlığı */}
       <Box sx={{ mb: 6, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
         <Avatar 
@@ -146,13 +158,13 @@ function ProfilePage() {
         )}
 
         <Grid container spacing={3} sx={{ maxWidth: 500 }}>
-          <Grid item xs={6}>
+          <Grid size={6}>
             <Paper sx={{ p: 3, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(212,175,55,0.2)' }}>
               <Typography variant="h4" sx={{ color: '#D4AF37', fontWeight: 800 }}>{stats.received}</Typography>
               <Typography variant="caption" sx={{ color: '#666', textTransform: 'uppercase' }}>Alınan Destek</Typography>
             </Paper>
           </Grid>
-          <Grid item xs={6}>
+          <Grid size={6}>
             <Paper sx={{ p: 3, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(212,175,55,0.2)' }}>
               <Typography variant="h4" sx={{ color: '#D4AF37', fontWeight: 800 }}>{stats.given}</Typography>
               <Typography variant="caption" sx={{ color: '#666', textTransform: 'uppercase' }}>Verilen Destek</Typography>
@@ -167,7 +179,7 @@ function ProfilePage() {
           </Typography>
           <Grid container spacing={2}>
             {getAchievements(stats).map((item) => (
-              <Grid item xs={12} sm={6} key={item.id}>
+              <Grid size={{ xs: 12, sm: 6 }} key={item.id}>
                 <Paper
                   sx={{
                     p: 2,
@@ -177,7 +189,8 @@ function ProfilePage() {
                     opacity: item.unlocked ? 1 : 0.4,
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 1.5
+                    gap: 1.5,
+                    textAlign: 'left'
                   }}
                 >
                   <Box sx={{ fontSize: '1.8rem' }}>{item.icon}</Box>
@@ -196,31 +209,52 @@ function ProfilePage() {
         </Box>
       </Box>
 
+      {/* SEKMELER: HİKAYELER | ONARILAN GALERİ | YOLCULUK */}
       <Box sx={{ borderBottom: 1, borderColor: 'rgba(212,175,55,0.2)', mb: 4 }}>
-        <Box sx={{ display: 'flex', gap: 4 }}>
+        <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
           <Typography 
-            onClick={() => setActiveTab(0)}
+            onClick={() => setSelectedTab(0)}
             sx={{ 
               pb: 1, 
               cursor: 'pointer', 
-              color: activeTab === 0 ? '#D4AF37' : '#666',
+              color: activeTab === 0 ? '#D4AF37' : '#888',
               borderBottom: activeTab === 0 ? '2px solid #D4AF37' : 'none',
-              fontWeight: 600
+              fontWeight: 600,
+              fontSize: '0.95rem'
             }}
           >
-            {isOwnProfile ? 'Hikayelerim' : 'Hikayeleri'}
+            {isOwnProfile ? 'Hikayelerim' : 'Hikayeleri'} ({posts.length})
           </Typography>
+
           <Typography 
-            onClick={() => setActiveTab(1)}
+            onClick={() => setSelectedTab(1)}
             sx={{ 
               pb: 1, 
               cursor: 'pointer', 
-              color: activeTab === 1 ? '#D4AF37' : '#666',
+              color: activeTab === 1 ? '#D4AF37' : '#888',
               borderBottom: activeTab === 1 ? '2px solid #D4AF37' : 'none',
-              fontWeight: 600
+              fontWeight: 600,
+              fontSize: '0.95rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5
             }}
           >
-            {isOwnProfile ? 'İyileşme Yolculuğum' : 'İyileşme Yolculuğu'}
+            ✨ Onarılan Başyapıtlar ({repairedPosts.length})
+          </Typography>
+
+          <Typography 
+            onClick={() => setSelectedTab(2)}
+            sx={{ 
+              pb: 1, 
+              cursor: 'pointer', 
+              color: activeTab === 2 ? '#D4AF37' : '#888',
+              borderBottom: activeTab === 2 ? '2px solid #D4AF37' : 'none',
+              fontWeight: 600,
+              fontSize: '0.95rem'
+            }}
+          >
+            İyileşme Yolculuğu
           </Typography>
         </Box>
       </Box>
@@ -248,6 +282,33 @@ function ProfilePage() {
           ) : (
             <Box sx={{ py: 10, textAlign: 'center', bgcolor: 'rgba(255,255,255,0.02)', borderRadius: 4 }}>
               <Typography sx={{ color: '#555' }}>Henüz bir hikaye paylaşılmamış.</Typography>
+            </Box>
+          )
+        ) : activeTab === 1 ? (
+          repairedPosts.length > 0 ? (
+            repairedPosts.map(post => (
+              <KintsugiCard 
+                key={post.id}
+                id={post.id}
+                content={post.content}
+                image_url={post.image_url}
+                mood={post.mood}
+                author_id={post.author_id}
+                author_name={post.author_name}
+                author_role={post.author_role}
+                is_anonymous={post.is_anonymous}
+                initialSupport={post.support_count}
+                initialHasSupported={0}
+              />
+            ))
+          ) : (
+            <Box sx={{ py: 8, textAlign: 'center', bgcolor: 'rgba(212,175,55,0.03)', border: '1px dashed rgba(212,175,55,0.2)', borderRadius: 4, p: 4 }}>
+              <Typography variant="h6" sx={{ color: '#D4AF37', mb: 1 }}>
+                Henüz Onarılmış Bir Başyapıt Yok 🏺
+              </Typography>
+              <Typography sx={{ color: '#888', fontSize: '0.9rem', maxWidth: 450, mx: 'auto' }}>
+                Topluluktan 10 veya daha fazla altın dikiş alan hikayeler altın çatlaklarla parlayarak bu galeride sonsuza dek sergilenir.
+              </Typography>
             </Box>
           )
         ) : (

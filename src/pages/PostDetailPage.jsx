@@ -1,40 +1,56 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Box, Typography, Button, CircularProgress } from '@mui/material';
-import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
-import KintsugiCard from '../components/kintsugi/KintsugiCard';
-import apiClient from '../services/apiClient';
+import { useEffect, useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { Container, Box, Typography, Button, CircularProgress } from '@mui/material'
+import { ArrowBack as ArrowBackIcon } from '@mui/icons-material'
+import KintsugiCard from '../components/kintsugi/KintsugiCard'
+import BreadcrumbsNav from '../components/layout/BreadcrumbsNav'
+import apiClient from '../services/apiClient'
+import { getStoredUser } from '../services/auth'
+import useDocumentTitle from '../hooks/useDocumentTitle'
 
 const PostDetailPage = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [post, setPost] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const [post, setPost] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const currentUser = getStoredUser() || {}
+
+  useDocumentTitle(
+    post ? `${post.author_name || 'Kintsugi'} Paylaşımı` : 'Gönderi Detayı',
+    post ? post.content?.slice(0, 150) : 'Gilded gönderi ve altın dikiş detayı.'
+  )
 
   useEffect(() => {
     const fetchPost = async () => {
       try {
-        const response = await apiClient.get(`/posts/${id}`, { params: { userId: currentUser.email } });
-        setPost(response.data);
+        const response = await apiClient.get(`/posts/${id}`, { params: { userId: currentUser.email } })
+        setPost(response.data)
       } catch (err) {
-        setError(err.response?.data?.error || err.message || 'Post bulunamadı');
+        setError(err.response?.data?.error || err.message || 'Post bulunamadı')
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    fetchPost();
-  }, [id, currentUser.email]);
+    fetchPost()
+  }, [id, currentUser.email])
 
   const handlePostDelete = () => {
-    navigate('/');
-  };
+    navigate('/')
+  }
 
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
+      {/* Breadcrumbs Navigation (Item 5) */}
+      <BreadcrumbsNav
+        items={[
+          { label: 'Akış', to: '/' },
+          { label: post ? `${post.author_name || 'İsimsiz'} Hikayesi` : `Gönderi #${id}` }
+        ]}
+      />
+
       <Button 
         startIcon={<ArrowBackIcon />} 
         onClick={() => navigate(-1)}
@@ -57,8 +73,8 @@ const PostDetailPage = () => {
           id={post.id}
           content={post.content}
           image_url={post.image_url}
+          audio_url={post.audio_url}
           mood={post.mood}
-          post_type={post.post_type}
           author_id={post.author_id}
           author_name={post.author_name}
           author_role={post.author_role}
@@ -69,7 +85,7 @@ const PostDetailPage = () => {
         />
       )}
     </Container>
-  );
-};
+  )
+}
 
-export default PostDetailPage;
+export default PostDetailPage

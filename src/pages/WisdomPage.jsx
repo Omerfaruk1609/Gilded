@@ -2,16 +2,20 @@ import { useEffect, useState } from 'react';
 import { Container, Typography, Box, CircularProgress, Button } from '@mui/material';
 import toast from 'react-hot-toast';
 import KintsugiCard from '../components/kintsugi/KintsugiCard';
+import BreadcrumbsNav from '../components/layout/BreadcrumbsNav';
 import apiClient from '../services/apiClient';
+import { getStoredUser } from '../services/auth';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 const WisdomPage = () => {
+  useDocumentTitle('Bilgelik Panosu (Wisdom)', 'Topluluk yöneticilerimizden altın değerinde sözler, tavsiyeler ve bilgelik damlaları.')
   const [posts, setPosts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [categoryTrigger, setCategoryTrigger] = useState(0);
   
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const currentUser = getStoredUser() || {};
 
   useEffect(() => {
     let isCancelled = false;
@@ -64,6 +68,7 @@ const WisdomPage = () => {
 
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
+      <BreadcrumbsNav items={[{ label: 'Bilgelik Panosu' }]} />
       <Box sx={{ textAlign: 'center', mb: 4 }}>
         <Typography variant="h3" sx={{ 
           fontFamily: "'Playfair Display', serif",

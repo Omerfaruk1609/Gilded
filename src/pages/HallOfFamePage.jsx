@@ -1,33 +1,39 @@
-import { useEffect, useState } from 'react';
-import { Box, Typography, Container } from '@mui/material';
-import KintsugiCard from '../components/kintsugi/KintsugiCard';
-import apiClient from '../services/apiClient';
+import { useEffect, useState } from 'react'
+import { Box, Typography, Container } from '@mui/material'
+import KintsugiCard from '../components/kintsugi/KintsugiCard'
+import BreadcrumbsNav from '../components/layout/BreadcrumbsNav'
+import apiClient from '../services/apiClient'
+import { getStoredUser } from '../services/auth'
+import useDocumentTitle from '../hooks/useDocumentTitle'
 
 function HallOfFamePage() {
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  useDocumentTitle('Onarılan Ruhlar Galerisi', 'Topluluğun sevgisiyle kırıklarından altın sızan, iyileşmiş başyapıtlar galerisi.')
+  const [posts, setPosts] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const currentUser = getStoredUser() || {}
 
   useEffect(() => {
-    let isCancelled = false;
+    let isCancelled = false
     const fetchPosts = async () => {
       try {
-        const response = await apiClient.get('/posts', { params: { userId: currentUser.email, repaired: true } });
-        if (!isCancelled) setPosts(response.data);
+        const response = await apiClient.get('/posts', { params: { userId: currentUser.email, repaired: true } })
+        if (!isCancelled) setPosts(response.data)
       } catch (error) {
-        console.error('Yükleme hatası:', error);
+        console.error('Yükleme hatası:', error)
       } finally {
-        if (!isCancelled) setLoading(false);
+        if (!isCancelled) setLoading(false)
       }
-    };
+    }
 
-    fetchPosts();
-    return () => { isCancelled = true; };
-  }, [currentUser.email]);
+    fetchPosts()
+    return () => { isCancelled = true }
+  }, [currentUser.email])
 
   return (
     <Container maxWidth="md" sx={{ py: 6 }}>
+      <BreadcrumbsNav items={[{ label: 'Altın Galeri' }]} />
+
       <Box sx={{ mb: 6, textAlign: 'center' }}>
         <Typography 
           variant="h2" 
@@ -76,7 +82,7 @@ function HallOfFamePage() {
         )}
       </div>
     </Container>
-  );
+  )
 }
 
-export default HallOfFamePage;
+export default HallOfFamePage

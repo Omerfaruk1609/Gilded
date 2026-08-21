@@ -3,6 +3,8 @@ import { Box, Container, Typography, Paper, Grid, TextField, Button, Chip } from
 import { Send as SendIcon, Forum as ForumIcon, People as PeopleIcon } from '@mui/icons-material';
 import { useSocket } from '../context/SocketContext';
 import { getStoredUser } from '../services/auth';
+import BreadcrumbsNav from '../components/layout/BreadcrumbsNav';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 const CIRCLES = [
   {
@@ -26,6 +28,7 @@ const CIRCLES = [
 ];
 
 export default function CirclesPage() {
+  useDocumentTitle('Halkalar (Circles) - Canlı Çemberler', 'Benzer duyguları yaşayan yolcularla anlık dertleşme ve meditasyon çemberleri.')
   const [selectedCircle, setSelectedCircle] = useState(CIRCLES[0]);
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
@@ -88,6 +91,7 @@ export default function CirclesPage() {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
+      <BreadcrumbsNav items={[{ label: 'Topluluk Çemberleri' }]} />
       <Box sx={{ mb: 4, textAlign: 'center' }}>
         <Typography variant="h3" sx={{ fontFamily: "'Playfair Display', serif", color: '#D4AF37', fontWeight: 800, mb: 1 }}>
           Topluluk Çemberleri ⭕
@@ -99,7 +103,7 @@ export default function CirclesPage() {
 
       <Grid container spacing={3}>
         {/* Çember Seçim Listesi */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {CIRCLES.map((circle) => {
               const isSelected = selectedCircle.id === circle.id;
@@ -133,7 +137,7 @@ export default function CirclesPage() {
         </Grid>
 
         {/* Canlı Mesajlaşma Odası */}
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}>
           <Paper
             sx={{
               display: 'flex',

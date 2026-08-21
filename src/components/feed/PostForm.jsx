@@ -22,7 +22,7 @@ const PostForm = ({ onPostCreated }) => {
 
   React.useEffect(() => {
     if (isBilge || isAdminUser(getStoredUser())) {
-      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const currentUser = getStoredUser() || {};
       apiClient.get('/wisdom/categories', { params: { userId: currentUser.email } })
         .then(res => setCategories(res.data))
         .catch(err => console.error('Kategoriler çekilemedi:', err));
@@ -33,7 +33,7 @@ const PostForm = ({ onPostCreated }) => {
     e.preventDefault();
     if (!content.trim()) return;
 
-    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const currentUser = getStoredUser() || {};
 
     setLoading(true);
     try {
@@ -96,6 +96,7 @@ const PostForm = ({ onPostCreated }) => {
       </Typography>
       <form onSubmit={handleSubmit}>
         <TextField
+          id="story-post-textarea"
           fullWidth
           multiline
           rows={3}
@@ -147,7 +148,7 @@ const PostForm = ({ onPostCreated }) => {
         </Box>
         {image && (
           <Box sx={{ mb: 2, position: 'relative', display: 'inline-block' }}>
-            <img src={URL.createObjectURL(image)} alt="Preview" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', border: '1px solid rgba(212,175,55,0.3)' }} />
+            <img src={URL.createObjectURL(image)} alt="Yüklenecek Görsel Önizlemesi" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', border: '1px solid rgba(212,175,55,0.3)' }} />
             <Button 
               size="small" 
               onClick={() => setImage(null)}
@@ -188,7 +189,11 @@ const PostForm = ({ onPostCreated }) => {
                   sx={{ color: '#D4AF37', '&.Mui-checked': { color: '#D4AF37' }, p: 0.5 }} 
                 />
               }
-              label={<Typography sx={{ color: theme.palette.text.secondary, fontSize: '0.75rem' }}>Anonim Paylaş</Typography>}
+              label={
+                <Typography sx={{ color: isAnonymous ? '#D4AF37' : theme.palette.text.secondary, fontSize: '0.8rem', fontWeight: 600 }}>
+                  {isAnonymous ? '🎭 Anonim Paylaş ("Bir Ruh")' : `👤 İsmimle Paylaş ("${getStoredUser()?.ad || 'Kullanıcı'}")`}
+                </Typography>
+              }
             />
           </Box>
 

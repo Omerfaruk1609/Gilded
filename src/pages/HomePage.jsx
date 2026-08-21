@@ -1,88 +1,120 @@
-import { useEffect, useState } from 'react';
-import { Box, Typography, Container } from '@mui/material';
-import KintsugiCard from '../components/kintsugi/KintsugiCard';
-import PostForm from '../components/feed/PostForm';
-import apiClient from '../services/apiClient';
+import { useEffect, useState } from 'react'
+import { Box, Typography, Container, Button } from '@mui/material'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
+import KintsugiCard from '../components/kintsugi/KintsugiCard'
+import PostForm from '../components/feed/PostForm'
+import apiClient from '../services/apiClient'
+import { getStoredUser } from '../services/auth'
+import useDocumentTitle from '../hooks/useDocumentTitle'
+import TestimonialsSection from '../components/home/TestimonialsSection'
+import CaseStudiesSection from '../components/home/CaseStudiesSection'
 
 function HomePage() {
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  useDocumentTitle('Ana Sayfa - Kusurların Altınla Onarımı', 'Kırılma anlarınızı paylaşın, Kintsugi felsefesiyle topluluğun desteğini alın.')
+  const [posts, setPosts] = useState([])
+  const [loading, setLoading] = useState(true)
 
   // Mevcut kullanıcıyı al
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const currentUser = getStoredUser() || {}
 
   useEffect(() => {
-    let isCancelled = false;
+    let isCancelled = false
     const fetchPosts = async () => {
       try {
-        const response = await apiClient.get('/posts', { params: { userId: currentUser.email } });
-        if (!isCancelled) setPosts(Array.isArray(response.data) ? response.data : []);
+        const response = await apiClient.get('/posts', { params: { userId: currentUser.email } })
+        if (!isCancelled) setPosts(Array.isArray(response.data) ? response.data : [])
       } catch (error) {
-        console.error('Yükleme hatası:', error);
+        console.error('Yükleme hatası:', error)
       } finally {
-        if (!isCancelled) setLoading(false);
+        if (!isCancelled) setLoading(false)
       }
-    };
+    }
 
-    fetchPosts();
-    return () => { isCancelled = true; };
-  }, [currentUser.email]);
+    fetchPosts()
+    return () => { isCancelled = true }
+  }, [currentUser.email])
 
   const handlePostCreated = (newPost) => {
-    setPosts([newPost, ...posts]);
-  };
+    setPosts([newPost, ...posts])
+  }
+
+  const scrollToPostForm = () => {
+    window.scrollTo({ top: 350, behavior: 'smooth' })
+  }
 
   return (
     <Container maxWidth="md" sx={{ py: 6 }}>
-      <Box sx={{ mb: 6, textAlign: 'center' }}>
+      {/* Top CTA Hero Section */}
+      <Box sx={{ mb: 5, textAlign: 'center' }}>
         <Typography 
           variant="h2" 
           sx={{ 
             fontFamily: "'Playfair Display', serif", 
-            fontWeight: 700,
+            fontWeight: 800,
             mb: 2,
-            background: 'linear-gradient(45deg, #ffd700, #ff8c00)',
+            background: 'linear-gradient(135deg, #FFF6D6 0%, #D4AF37 50%, #AA7C11 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
+            fontSize: { xs: '2.4rem', md: '3.5rem' }
           }}
         >
           Kırıklardan Doğan Güç
         </Typography>
-        <Typography variant="h6" sx={{ color: '#94a3b8', fontWeight: 400 }}>
-          Başarısızlıklarını paylaş, topluluğun desteğiyle onları altına dönüştür.
+        <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.8)', fontWeight: 400, maxWidth: 650, mx: 'auto', mb: 3 }}>
+          Başarısızlıklarını ve kırılma anlarını gizleme. Topluluğun şefkatiyle onları parıldayan birer altına dönüştür.
         </Typography>
+        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Button
+            variant="contained"
+            onClick={scrollToPostForm}
+            startIcon={<AutoAwesomeIcon />}
+            sx={{
+              bgcolor: '#D4AF37',
+              color: '#000',
+              fontWeight: 700,
+              px: 3.5,
+              py: 1.2,
+              borderRadius: 2.5,
+              boxShadow: '0 4px 15px rgba(212,175,55,0.3)',
+              '&:hover': { bgcolor: '#b89428' }
+            }}
+          >
+            Kırılmanı Altınla Onar
+          </Button>
+        </Box>
       </Box>
 
       {/* Global Mood / Topluluk Ruhu */}
       {!loading && posts.length > 0 && (
         <Box sx={{ 
           mb: 4, 
-          p: 2, 
-          bgcolor: 'rgba(212,175,55,0.05)', 
-          borderRadius: 4, 
-          border: '1px solid rgba(212,175,55,0.1)',
-          textAlign: 'center'
+          p: 2.5, 
+          bgcolor: 'rgba(212,175,55,0.06)', 
+          borderRadius: 3, 
+          border: '1px solid rgba(212,175,55,0.2)',
+          textAlign: 'center',
+          backdropFilter: 'blur(8px)'
         }}>
           <Typography variant="caption" sx={{ color: '#D4AF37', textTransform: 'uppercase', letterSpacing: 1.5, fontWeight: 700 }}>
-            Topluluk Ruhu
+            ✨ TOPLULUK RUHU
           </Typography>
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2, mt: 1 }}>
-            <Typography variant="h5" sx={{ color: '#fff' }}>
-              Bugün çoğunlukla <strong>{
+            <Typography variant="h5" sx={{ color: '#fff', fontSize: { xs: '1.1rem', md: '1.3rem' } }}>
+              Bugün topluluk çoğunlukla <strong>{
                 Object.entries(posts.reduce((acc, p) => {
-                  if (p.mood) acc[p.mood] = (acc[p.mood] || 0) + 1;
-                  return acc;
+                  if (p.mood) acc[p.mood] = (acc[p.mood] || 0) + 1
+                  return acc
                 }, {})).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Durağan'
-              }</strong> hissediyoruz.
+              }</strong> hissediyor.
             </Typography>
             <span style={{ fontSize: '2rem' }}>
               {
                 (() => {
                   const moodStats = posts.reduce((acc, p) => {
-                    if (p.mood) acc[p.mood] = (acc[p.mood] || 0) + 1;
-                    return acc;
-                  }, {});
-                  const topMood = Object.entries(moodStats).sort((a, b) => b[1] - a[1])[0]?.[0];
+                    if (p.mood) acc[p.mood] = (acc[p.mood] || 0) + 1
+                    return acc
+                  }, {})
+                  const topMood = Object.entries(moodStats).sort((a, b) => b[1] - a[1])[0]?.[0]
                   
                   const emojiMap = {
                     'Kırgın': '💔',
@@ -91,8 +123,8 @@ function HomePage() {
                     'Öfkeli': '🔥',
                     'Umutlu': '🌱',
                     'Huzurlu': '🧘'
-                  };
-                  return emojiMap[topMood] || '🏺';
+                  }
+                  return emojiMap[topMood] || '🏺'
                 })()
               }
             </span>
@@ -105,7 +137,7 @@ function HomePage() {
 
       <div className="kintsugi-container">
         {loading ? (
-          <Typography sx={{ color: '#888', textAlign: 'center' }}>Yükleniyor...</Typography>
+          <Typography sx={{ color: '#888', textAlign: 'center', my: 4 }}>Altın parçalar yükleniyor...</Typography>
         ) : (
           Array.isArray(posts) && posts.map(post => (
             <KintsugiCard 
@@ -126,8 +158,14 @@ function HomePage() {
           ))
         )}
       </div>
+
+      {/* Case Studies / Vaka Çalışmaları (Item 6) */}
+      <CaseStudiesSection />
+
+      {/* Testimonials / Topluluk Yorumları (Item 15) */}
+      <TestimonialsSection />
     </Container>
-  );
+  )
 }
 
-export default HomePage;
+export default HomePage

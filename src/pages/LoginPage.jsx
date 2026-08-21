@@ -3,8 +3,10 @@ import { Box, Typography, TextField, Button, Paper, Divider, Container, Circular
 import { useNavigate } from 'react-router-dom';
 import { loginUser } from '../services/auth';
 import toast from 'react-hot-toast';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 function LoginPage() {
+  useDocumentTitle('Giriş Yap', 'Gilded Kintsugi topluluğuna giriş yapın ve altın dikişlerinizi yönetin.');
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

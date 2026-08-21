@@ -3,8 +3,10 @@ import { Box, Typography, TextField, Button, Paper, Divider, Container, Circular
 import { useNavigate } from 'react-router-dom';
 import { registerUser } from '../services/auth';
 import toast from 'react-hot-toast';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 function RegisterPage() {
+  useDocumentTitle('Kayıt Ol', 'Gilded Kintsugi topluluğuna katılın, kırıklarınızı altınla onarmaya başlayın.');
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

@@ -14,17 +14,18 @@ import {
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import apiClient from '../services/apiClient';
+import { getStoredUser } from '../services/auth';
 
 function AdminPanel() {
   const [tab, setTab] = useState(0);
-  const [stats, setStats] = useState(null);
+  const [stats, setStats] = useState({ totalUsers: 0, totalPosts: 0, repairedPosts: 0, totalSupports: 0 });
   const [users, setUsers] = useState([]);
   const [posts, setPosts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const currentUser = getStoredUser() || {};
 
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const refetch = () => setRefreshTrigger(prev => prev + 1);
@@ -128,7 +129,7 @@ function AdminPanel() {
           { label: 'Onarılan Ruhlar', value: stats?.repairedPosts, icon: <AutoFixHighIcon sx={{ color: '#D4AF37' }} /> },
           { label: 'Toplam Dikiş', value: stats?.totalSupports, icon: <ShieldIcon sx={{ color: '#D4AF37' }} /> },
         ].map((item, idx) => (
-          <Grid item xs={12} sm={6} md={3} key={idx}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }} key={idx}>
             <Card sx={{ bgcolor: 'rgba(212, 175, 55, 0.05)', border: '1px solid rgba(212, 175, 55, 0.2)', borderRadius: 4 }}>
               <CardContent sx={{ textAlign: 'center' }}>
                 <Box sx={{ mb: 1 }}>{item.icon}</Box>

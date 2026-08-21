@@ -3,7 +3,7 @@ import { Box, TextField, IconButton, Typography, Collapse, Button, Tooltip, useT
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
-import { isAdminUser } from '../../services/auth';
+import { isAdminUser, getStoredUser } from '../../services/auth';
 import { API_BASE_URL } from '../../services/apiConfig';
 import apiClient from '../../services/apiClient';
 import '../../css/kintsugi.css';
@@ -23,9 +23,10 @@ const CommentItem = ({
   isAdmin
 }) => {
   const theme = useTheme();
-  const authorLabel = (comment.post_type === 'wisdom') 
-    ? 'Bilge Bir Ruh' 
-    : 'Bir Ruh';
+  const isAnon = (comment.is_anonymous === 1 || comment.is_anonymous === '1' || comment.is_anonymous === true || comment.is_anonymous === 'true');
+  const authorLabel = isAnon 
+    ? (comment.post_type === 'wisdom' ? 'Bilge Bir Ruh' : 'Bir Ruh') 
+    : (comment.author_name || comment.author_id?.split('@')[0] || 'Bir Ruh');
 
   return (
     <div className="comment-item">
@@ -184,7 +185,7 @@ const KintsugiCard = ({ id, content, image_url, audio_url, mood, post_type = 'no
     }
   };
 
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const currentUser = getStoredUser() || {};
   const isAdmin = isAdminUser(currentUser);
   const isAuthor = currentUser.email === author_id;
 
@@ -381,7 +382,8 @@ const KintsugiCard = ({ id, content, image_url, audio_url, mood, post_type = 'no
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography 
                 onClick={() => {
-                  if (is_anonymous === 0 || is_anonymous === '0' || is_anonymous === false || is_anonymous === 'false') {
+                  const isAnon = (is_anonymous === 1 || is_anonymous === '1' || is_anonymous === true || is_anonymous === 'true');
+                  if (!isAnon && author_id) {
                     navigate(`/profile?email=${author_id}`);
                   }
                 }}
@@ -389,13 +391,15 @@ const KintsugiCard = ({ id, content, image_url, audio_url, mood, post_type = 'no
                   fontWeight: 600, 
                   fontSize: '0.9rem', 
                   color: '#fff',
-                  cursor: (is_anonymous === 0 || is_anonymous === '0' || is_anonymous === false || is_anonymous === 'false') ? 'pointer' : 'default',
+                  cursor: !(is_anonymous === 1 || is_anonymous === '1' || is_anonymous === true || is_anonymous === 'true') ? 'pointer' : 'default',
                   '&:hover': {
-                    textDecoration: (is_anonymous === 0 || is_anonymous === '0' || is_anonymous === false || is_anonymous === 'false') ? 'underline' : 'none'
+                    textDecoration: !(is_anonymous === 1 || is_anonymous === '1' || is_anonymous === true || is_anonymous === 'true') ? 'underline' : 'none'
                   }
                 }}
               >
-                {(is_anonymous === 0 || is_anonymous === '0' || is_anonymous === false || is_anonymous === 'false') ? (author_name || 'İsimsiz Ruh') : (post_type === 'wisdom' ? 'Bilge Bir Ruh' : 'Bir Ruh')}
+                {(is_anonymous === 1 || is_anonymous === '1' || is_anonymous === true || is_anonymous === 'true') 
+                  ? (post_type === 'wisdom' ? 'Bilge Bir Ruh' : 'Bir Ruh') 
+                  : (author_name || author_id?.split('@')[0] || 'Bir Ruh')}
               </Typography>
               
               {author_role === 'ADMIN' && (
@@ -442,7 +446,8 @@ const KintsugiCard = ({ id, content, image_url, audio_url, mood, post_type = 'no
           <Box sx={{ mt: 2, mb: 2, textAlign: 'center' }}>
             <img 
               src={`${API_BASE_URL}${image_url}`} 
-              alt="Post" 
+              alt={content ? `Kintsugi Hikaye Görseli - ${content.slice(0, 50)}` : 'Kintsugi Paylaşım Görseli'} 
+              loading="lazy"
               style={{ 
                 maxWidth: '100%', 
                 maxHeight: '300px', 

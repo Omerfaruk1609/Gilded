@@ -3,11 +3,12 @@ import { Box, Container, Paper, Typography, Avatar, TextField, IconButton, List,
 import { Send as SendIcon, Chat as ChatIcon } from '@mui/icons-material';
 import { useSearchParams } from 'react-router-dom';
 import { useSocket } from '../context/SocketContext';
+import { getStoredUser } from '../services/auth';
 import apiClient from '../services/apiClient';
 import toast from 'react-hot-toast';
 
 function MessagesPage() {
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const currentUser = getStoredUser() || {};
   const socket = useSocket();
   const [searchParams, setSearchParams] = useSearchParams();
   const [contacts, setContacts] = useState([]);
