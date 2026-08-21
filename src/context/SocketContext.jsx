@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import { API_BASE_URL } from '../services/apiConfig';
+import { getStoredUser } from '../services/auth';
 import toast from 'react-hot-toast';
 
 const SocketContext = createContext();
@@ -10,11 +11,11 @@ export const useSocket = () => useContext(SocketContext);
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
-  const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user') || 'null'));
+  const [user, setUser] = useState(() => getStoredUser());
 
   useEffect(() => {
     const handleAuthChange = () => {
-      setUser(JSON.parse(localStorage.getItem('user') || 'null'));
+      setUser(getStoredUser());
     };
 
     window.addEventListener('auth-change', handleAuthChange);

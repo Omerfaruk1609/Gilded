@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /messages
+
+Sitemap: https://gilded-kintsugi.com/sitemap.xml
