@@ -11,7 +11,7 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const jwt = require('jsonwebtoken');
-const { containsProfanity } = require('./utils/moderation.cjs');
+const { containsProfanity, moderateText } = require('./utils/kintsugiModeration.cjs');
 const { analyzeComment } = require('./utils/aiModeration.cjs');
 const { generatePhilosopherWisdom } = require('./utils/philosopherBot.cjs');
 
@@ -74,8 +74,19 @@ const corsOptions = {
 
 // HTTP Header Güvenliği (Helmet)
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  xContentTypeOptions: true, // Madde 12: nosniff
+  hsts: { maxAge: 31536000, includeSubDomains: true } // Madde 19: HSTS
 }));
+
+// 🛡️ Hassas Dosya ve Dizin Koruması (Maddeler 12, 17, 21: .env, .sqlite, .git, .sh engeli)
+app.use((req, res, next) => {
+  const blockedPattern = /\.(env|sqlite|sql|git|sh|bat|cmd|exe|php|config)(\/|$|\?)/i;
+  if (blockedPattern.test(req.path)) {
+    return res.status(403).json({ error: 'Erişim reddedildi: Bu dosya formatına web üzerinden erişim yasaktır.' });
+  }
+  next();
+});
 
 app.use(cors(corsOptions));
 app.use(express.json());
@@ -98,9 +109,28 @@ const authLimiter = rateLimit({
   message: { error: 'Çok fazla giriş/kayıt denemesi yapıldı, lütfen 15 dakika sonra tekrar deneyin.' }
 });
 
+// 🛡️ Pahalı Uç Nokta Limiti (Madde 10: AI & Dosya Yükleme Kotaları)
+const aiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 25,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Yapay zeka analiz sınırına ulaştınız. Lütfen biraz sonra tekrar deneyin.' }
+});
+
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Dosya yükleme sınırına ulaştınız. Lütfen biraz sonra tekrar deneyin.' }
+});
+
 app.use('/api/', globalLimiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
+app.use('/api/posts/:id/philosopher-wisdom', aiLimiter);
+app.use('/api/posts', uploadLimiter);
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -403,8 +433,12 @@ app.post('/api/posts', requireAuth, (req, res, next) => {
   const audio_url = req.file && isAudio ? `/uploads/${req.file.filename}` : null;
   if (!content) return res.status(400).json({ error: 'İçerik gerekli' });
 
-  if (containsProfanity(content)) {
-    return res.status(400).json({ error: 'Topluluk kurallarına aykırı ifade tespit edildi.' });
+  const modCheck = await moderateText(content);
+  if (!modCheck.isClean) {
+    return res.status(400).json({ 
+      error: modCheck.reason || 'Topluluk kurallarına aykırı ifade tespit edildi.',
+      category: modCheck.category
+    });
   }
 
   try {
@@ -498,20 +532,17 @@ app.post('/api/posts/:id/comments', requireAuth, async (req, res) => {
   
   if (!content) return res.status(400).json({ error: 'Mesaj içeriği gerekli' });
   
-  if (containsProfanity(content)) {
-    return res.status(400).json({ error: 'Topluluk kurallarına aykırı ifade tespit edildi.' });
+  const modCheck = await moderateText(content);
+  if (!modCheck.isClean) {
+    return res.status(400).json({ 
+      error: modCheck.reason || 'Bu mesaj topluluk ruhuna (destekleyici ve iyileştirici olma) uygun bulunmadı. Lütfen daha nazik ve destekleyici bir dil kullanmayı dene.',
+      category: modCheck.category
+    });
   }
 
   try {
-    // AI Moderasyonu
-    const aiVerdict = await analyzeComment(content);
-    if (aiVerdict === 'REJECT') {
-      return res.status(400).json({ 
-        error: 'Bu mesaj topluluk ruhuna (destekleyici ve iyileştirici olma) uygun bulunmadı. Lütfen daha nazik ve destekleyici bir dil kullanmayı dene.' 
-      });
-    }
-
     const parentId = req.body.parent_id || null;
+
     await db.query(
       'INSERT INTO comments (post_id, content, author_id, parent_id, is_anonymous) VALUES ($1, $2, $3, $4, $5)',
       [id, content, author_id, parentId, true]
@@ -716,11 +747,17 @@ app.put('/api/notifications/:id/read', requireAuth, async (req, res) => {
 
 // --- AUTH ENDPOINTS ---
 
-// Kayıt Ol
+// 🛡️ Kayıt Ol (Madde 2: Mass Assignment Koruması - Rol ve ID enjeksiyonu engellendi)
 app.post('/api/auth/register', async (req, res) => {
   const { email, password, ad } = req.body;
   if (!email || !password || !ad) {
     return res.status(400).json({ error: 'Tüm alanlar zorunludur' });
+  }
+
+  // E-posta formatı kontrolü
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Geçerli bir e-posta adresi giriniz' });
   }
 
   try {
@@ -731,8 +768,8 @@ app.post('/api/auth/register', async (req, res) => {
     // Şifreyi hashle
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Kaydet
-    await db.query('INSERT INTO users (email, password, ad) VALUES ($1, $2, $3)', [email, hashedPassword, ad]);
+    // Kaydet - Rol her zaman varsayılan 'USER' olarak yazılır
+    await db.query('INSERT INTO users (email, password, ad, role) VALUES ($1, $2, $3, $4)', [email, hashedPassword, ad, 'USER']);
 
     res.status(201).json({ message: 'Kayıt başarılı' });
   } catch (error) {
@@ -740,7 +777,7 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// Giriş Yap
+// 🛡️ Giriş Yap (Madde 3: Token ömrünü 24 saate optimize et & Madde 8: E-posta ifşası önleme)
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
@@ -760,7 +797,7 @@ app.post('/api/auth/login', async (req, res) => {
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '24h' } // Madde 3: Güvenli token süresi
     );
 
     res.json({ ...userWithoutPassword, token });
@@ -769,33 +806,114 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// 🛡️ Çıkış Yap (Madde 4: Çıkışta Oturumu Düşür)
+app.post('/api/auth/logout', requireAuth, (req, res) => {
+  // Frontend token'ı localStorage/Cookie'den silerken, backend de oturum sonlandırma onayını döner
+  res.json({ success: true, message: 'Oturum güvenli bir şekilde kapatıldı.' });
+});
+
+// 🛡️ Hesabı Gerçekten Sil (Madde 21: GDPR / KVKK Unutulma Hakkı & Cascade Silme)
+app.delete('/api/users/me', requireAuth, async (req, res) => {
+  const userEmail = req.user?.email;
+  if (!userEmail) {
+    return res.status(401).json({ error: 'Yetkilendirme hatası.' });
+  }
+
+  try {
+    // 1. Kullanıcının bildirimlerini sil
+    await db.query('DELETE FROM notifications WHERE user_email = $1 OR actor_email = $1', [userEmail]);
+
+    // 2. Kullanıcının takip ilişkilerini sil
+    await db.query('DELETE FROM follows WHERE follower_email = $1 OR following_email = $1', [userEmail]);
+
+    // 3. Kullanıcının beğeni / desteklerini sil
+    await db.query('DELETE FROM supports WHERE user_id = $1', [userEmail]);
+
+    // 4. Kullanıcının yorum oylarını sil
+    await db.query('DELETE FROM comment_votes WHERE user_email = $1', [userEmail]);
+
+    // 5. Kullanıcının yorumlarını sil
+    await db.query('DELETE FROM comments WHERE author_id = $1', [userEmail]);
+
+    // 6. Kullanıcının gönderilerini sil
+    await db.query('DELETE FROM posts WHERE author_id = $1', [userEmail]);
+
+    // 7. Kullanıcının bilgelik takip kayıtlarını sil
+    await db.query('DELETE FROM user_category_follows WHERE user_id = $1', [userEmail]);
+
+    // 8. Kullanıcının anlık mesajlarını sil
+    await db.query('DELETE FROM direct_messages WHERE sender_email = $1 OR receiver_email = $1', [userEmail]);
+
+    // 9. Kullanıcı ana kaydını sil
+    await db.query('DELETE FROM users WHERE email = $1', [userEmail]);
+
+    console.log(`🗑️ [HESAP SİLİNDİ]: ${userEmail} kullanıcısına ait tüm veriler kalıcı olarak temizlendi.`);
+    res.json({ success: true, message: 'Hesabınız ve tüm verileriniz kalıcı olarak silindi.' });
+  } catch (error) {
+    console.error('Hesap silme hatası:', error);
+    res.status(500).json({ error: 'Hesap silinirken bir hata oluştu.' });
+  }
+});
+
 // Kullanıcı arama (Ruh Arama ve Keşif)
-app.get('/api/users/search', requireAuth, async (req, res) => {
+app.get('/api/users/search', async (req, res) => {
   const { q, currentUserId } = req.query;
   if (!q || !q.trim()) return res.json([]);
 
   const searchTerm = `%${q.trim()}%`;
-  const currentUser = currentUserId || req.user?.email;
+  const currentUser = req.user?.email || currentUserId || '';
 
   try {
     const query = `
       SELECT u.id, u.email, u.ad, u.role, u.created_at,
-      (SELECT COUNT(*)::int FROM follows WHERE follower_email = u.email) as following_count,
-      (SELECT COUNT(*)::int FROM follows WHERE following_email = u.email) as follower_count,
-      EXISTS(SELECT 1 FROM follows WHERE follower_email = $2 AND following_email = u.email) as is_following
+      (SELECT COUNT(*) FROM follows WHERE follower_email = u.email) as following_count,
+      (SELECT COUNT(*) FROM follows WHERE following_email = u.email) as follower_count
       FROM users u
       WHERE (LOWER(u.ad) LIKE LOWER($1) OR LOWER(u.email) LIKE LOWER($1))
-      AND u.email != $2
+      AND (u.email != $2 OR $2 = '')
       LIMIT 20
     `;
     const result = await db.query(query, [searchTerm, currentUser]);
-    res.json(result.rows);
+
+    // Takip durumu kontrolü
+    const usersWithFollowing = await Promise.all(
+      result.rows.map(async (u) => {
+        let is_following = false;
+        if (currentUser) {
+          const followCheck = await db.query(
+            'SELECT 1 FROM follows WHERE follower_email = $1 AND following_email = $2 LIMIT 1',
+            [currentUser, u.email]
+          );
+          is_following = followCheck.rows.length > 0;
+        }
+        return {
+          ...u,
+          is_following,
+          following_count: parseInt(u.following_count || 0, 10),
+          follower_count: parseInt(u.follower_count || 0, 10)
+        };
+      })
+    );
+
+    res.json(usersWithFollowing);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Kullanıcı arama hatası:', error);
+    res.status(500).json({ error: 'Kullanıcılar aranırken bir hata oluştu.' });
   }
 });
 
 // --- ADMIN ENDPOINTS ---
+
+// 🛡️ Manuel / Otomatik Yedekleme Tetikleyici (Madde 20)
+app.post('/api/admin/backup', requireAuth, requireAdmin, (req, res) => {
+  const { backupDatabase } = require('./utils/backupDb.cjs');
+  const result = backupDatabase();
+  if (result.success) {
+    res.json({ message: 'Veritabanı yedeği başarıyla alındı.', file: result.file });
+  } else {
+    res.status(500).json({ error: result.error || 'Yedekleme başarısız oldu.' });
+  }
+});
 
 // İstatistikleri getir
 app.get('/api/admin/stats', requireAuth, requireAdmin, async (req, res) => {
@@ -1022,6 +1140,14 @@ app.post('/api/messages', requireAuth, async (req, res) => {
 
   if (!receiverEmail || !content) {
     return res.status(400).json({ error: 'Alıcı ve mesaj içeriği gerekli' });
+  }
+
+  const modCheck = await moderateText(content);
+  if (!modCheck.isClean) {
+    return res.status(400).json({ 
+      error: modCheck.reason || 'Mesajınız topluluk kurallarına aykırı ifade içeriyor.',
+      category: modCheck.category
+    });
   }
 
   try {

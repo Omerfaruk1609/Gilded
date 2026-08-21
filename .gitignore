@@ -29,3 +29,6 @@ dist-ssr
 server/database.sqlite
 server/uploads/*
 !server/uploads/.gitkeep
+server/backups/*
+!server/backups/.gitkeep
+

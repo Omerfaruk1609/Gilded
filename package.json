@@ -7,6 +7,8 @@
     "start": "node server/index.cjs",
     "dev": "concurrently \"vite\" \"nodemon server/index.cjs\"",
     "server": "nodemon server/index.cjs",
+    "kintsugi:backend": "npm --prefix services/kintsugi-text run dev:backend",
+    "kintsugi:playground": "npm --prefix services/kintsugi-text run dev:playground",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
