@@ -1,0 +1,101 @@
+// KintsugiText Enterprise Database Schema (Prisma ORM)
+datasource db {
+  provider = "sqlite" // Production için postgresql olarak değiştirilebilir
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Tenant {
+  id           String   @id @default(uuid())
+  name         String
+  plan         String   @default("FREE") // FREE, PRO, ENTERPRISE
+  rateLimitRpm Int      @default(60)     // Dakikalık istek limiti
+  dailyQuota   Int      @default(10000)  // Günlük toplam istek limiti
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  apiKeys      ApiKey[]
+
+  @@map("tenants")
+}
+
+model ApiKey {
+  id         String    @id @default(uuid())
+  tenantId   String
+  keyHash    String
+  prefix     String
+  name       String
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
+}
+
+model Rule {
+  id        String   @id @default(uuid())
+  pattern   String
+  category  String
+  score     Float
+  reason    String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("rules")
+}
+
+model ModerationLog {
+  id            String   @id @default(uuid())
+  correlationId String   @unique
+  tenantId      String   @default("gilded_prod")
+  entityType    String   @default("comment")
+  entityId      String?
+  text          String
+  sanitizedText String
+  verdict       String   // APPROVED, REJECTED, FLAGGED_FOR_REVIEW
+  riskScore     Int      // 0 - 100
+  violations    String   // JSON String
+  breakdown     String   // JSON String
+  createdAt     DateTime @default(now())
+
+  feedback      FeedbackRecord?
+  reviewQueue   HumanReviewQueue?
+
+  @@index([tenantId, entityType])
+  @@index([createdAt])
+  @@map("moderation_logs")
+}
+
+model FeedbackRecord {
+  id               String        @id @default(uuid())
+  logId            String        @unique
+  originalVerdict  String
+  moderatorVerdict String
+  reason           String?
+  moderatorId      String        @default("mod_admin")
+  createdAt        DateTime      @default(now())
+
+  log              ModerationLog @relation(fields: [logId], references: [id], onDelete: Cascade)
+
+  @@map("feedback_records")
+}
+
+model HumanReviewQueue {
+  id         String        @id @default(uuid())
+  logId      String        @unique
+  status     String        @default("PENDING") // PENDING, RESOLVED, DISMISSED
+  assignedTo String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  log        ModerationLog @relation(fields: [logId], references: [id], onDelete: Cascade)
+
+  @@map("human_review_queue")
+}

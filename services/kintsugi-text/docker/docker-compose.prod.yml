@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: kintsugi_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: kintsugi_user
+      POSTGRES_PASSWORD: kintsugi_password
+      POSTGRES_DB: kintsugi_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis-node1:
+    image: redis:7-alpine
+    container_name: kintsugi_redis_1
+    restart: always
+    command: ["redis-server", "--cluster-enabled", "yes", "--cluster-config-file", "nodes.conf", "--cluster-node-timeout", "5000", "--appendonly", "yes"]
+    ports:
+      - "7000:6379"
+
+  redis-node2:
+    image: redis:7-alpine
+    container_name: kintsugi_redis_2
+    restart: always
+    command: ["redis-server", "--cluster-enabled", "yes", "--cluster-config-file", "nodes.conf", "--cluster-node-timeout", "5000", "--appendonly", "yes"]
+    ports:
+      - "7001:6379"
+
+  redis-node3:
+    image: redis:7-alpine
+    container_name: kintsugi_redis_3
+    restart: always
+    command: ["redis-server", "--cluster-enabled", "yes", "--cluster-config-file", "nodes.conf", "--cluster-node-timeout", "5000", "--appendonly", "yes"]
+    ports:
+      - "7002:6379"
+
+  ai-service:
+    build:
+      context: ..
+      dockerfile: docker/ai-service.Dockerfile
+    container_name: kintsugi_ai_service
+    restart: always
+    environment:
+      REDIS_CLUSTER_NODES: redis-node1:6379,redis-node2:6379,redis-node3:6379
+      REDIS_URL: redis://redis-node1:6379
+      REDIS_PASSWORD: ""
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis-node1
+      - redis-node2
+      - redis-node3
+
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/backend.Dockerfile
+    container_name: kintsugi_backend
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://kintsugi_user:kintsugi_password@postgres:5432/kintsugi_db
+      REDIS_CLUSTER_NODES: redis-node1:6379,redis-node2:6379,redis-node3:6379
+      REDIS_URL: redis://redis-node1:6379
+      REDIS_PASSWORD: ""
+    ports:
+      - "4000:4000"
+    depends_on:
+      - postgres
+      - redis-node1
+      - redis-node2
+      - redis-node3
+      - ai-service
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/frontend.Dockerfile
+    container_name: kintsugi_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

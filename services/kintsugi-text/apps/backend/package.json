@@ -1,0 +1,25 @@
+{
+  "name": "@kintsugi/backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "build": "node -e \"console.log('backend ready')\"",
+    "start": "node src/server.js",
+    "seed": "node src/database/seed.js",
+    "test": "node --test tests/unit/*.test.js tests/integration/*.test.js",
+    "test:unit": "node --test tests/unit/*.test.js",
+    "test:integration": "node --test tests/integration/*.test.js"
+  },
+  "dependencies": {
+    "@kintsugi/shared-types": "*",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "helmet": "^7.1.0",
+    "ioredis": "^5.4.1",
+    "swagger-ui-express": "^5.0.1",
+    "zod": "^3.23.8"
+  }
+}

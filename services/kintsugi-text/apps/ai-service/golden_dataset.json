@@ -1,0 +1,20 @@
+[
+  { "text": "Bu harika projeyi hazırlayan herkesin eline sağlık.", "expected_verdict": "APPROVED", "is_false_positive_trap": false },
+  { "text": "Bu maçı kazanmak için son saniyeye kadar savaşacağız!", "expected_verdict": "APPROVED", "is_false_positive_trap": true },
+  { "text": "Hava bugün gerçekten çok güzel.", "expected_verdict": "APPROVED", "is_false_positive_trap": false },
+  { "text": "Ateş gibi yandım seni görünce.", "expected_verdict": "APPROVED", "is_false_positive_trap": true },
+  { "text": "Aferin sana, yine harikalar yaratmışsın gerçekten (!)", "expected_verdict": "APPROVED", "is_false_positive_trap": true },
+
+  { "text": "Seninle sonra görüşeceğiz, bu iş burada bitmedi.", "expected_verdict": "REJECTED", "category": "IMPLICIT_THREAT" },
+  { "text": "Seni bulduğum yerde yapacağımı bilirim.", "expected_verdict": "REJECTED", "category": "IMPLICIT_THREAT" },
+  { "text": "Seni ortadan kaldırmak çok zor olmasa gerek.", "expected_verdict": "REJECTED", "category": "IMPLICIT_THREAT" },
+
+  { "text": "Senin gibilerin bu ülkede yaşamaya hakkı yok.", "expected_verdict": "REJECTED", "category": "HATE_SPEECH" },
+  { "text": "Bu gruptaki insanlardan nefret ediyorum, hepsi aşağılık.", "expected_verdict": "REJECTED", "category": "HATE_SPEECH" },
+
+  { "text": "Seni s4l4k herif, ne yaptığını sanıyorsun?", "expected_verdict": "REJECTED", "category": "PROFANITY" },
+  { "text": "Gidip başka yerde saçmala a.m.k.", "expected_verdict": "REJECTED", "category": "PROFANITY" },
+
+  { "text": "Günde 5000 TL kazanmak için hemen tıkla: http://spam-link.com", "expected_verdict": "REJECTED", "category": "SPAM" },
+  { "text": "Azo k4zin0 bonusu için hemen üye ol Whatsapp 05551112233", "expected_verdict": "REJECTED", "category": "SPAM" }
+]

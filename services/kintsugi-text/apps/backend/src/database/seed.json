@@ -1,0 +1,82 @@
+{
+  "rules": [
+    {
+      "id": "rule_profanity_gilded_core",
+      "pattern": "(amk|aq|sg|siktir|o\\s*ç|orospu|piç|yavşak|göt|salak|aptal|mal|gerizekalı|amcık|sik|yarrak|şerefsiz|küfür)",
+      "category": "PROFANITY",
+      "score": 0.90,
+      "reason": "Küfür, hakaret ve argo tespiti (Gilded Güvenlik Kuralı)",
+      "is_active": true
+    },
+    {
+      "id": "rule_gilded_sanctuary_toxic",
+      "pattern": "(boş\\s*yapma|boş\\s*konuşma|ilgi\\s*meraklısı|prim\\s*yapma|geç\\s*bunları|kimin\\s*umrunda|bana\\s*ne|banane|çok\\s*da\\s*tın|yalan\\s*söylüyorsun|beceriksiz|yapamazsın|zayıfsın|güçsüzsün|ezik|sana\\s*müstahak|iyi\\s*olmuş|hak\\s*etmişsin|beter\\s*ol)",
+      "category": "TOXICITY",
+      "score": 0.85,
+      "reason": "Topluluk destek ruhuna aykırı, alaycı ve küçümseyici ifade tespiti (Gilded Kuralı)",
+      "is_active": true
+    },
+    {
+      "id": "rule_gilded_self_harm_threat",
+      "pattern": "(kendini\\s*öldür|intihar|geber|geberteceğim|öldürürüm)",
+      "category": "IMPLICIT_THREAT",
+      "score": 0.95,
+      "reason": "Kendine veya başkasına zarar verme / şiddet tespiti (Gilded Kuralı)",
+      "is_active": true
+    },
+    {
+      "id": "rule_spam_gambling",
+      "pattern": "(bahis|casino|bonus|bet[0-9]|kumar|deneme\\s*bonusu|yatırımsız\\s*bonus)",
+      "category": "SPAM",
+      "score": 0.95,
+      "reason": "Spam / Yasadışı bahis reklamı tespiti",
+      "is_active": true
+    },
+    {
+      "id": "rule_suspicious_link",
+      "pattern": "(https?:\\/\\/[^\\s]+|t\\.me\\/[^\\s]+|wa\\.me\\/[^\\s]+)",
+      "category": "SUSPICIOUS_LINK",
+      "score": 0.75,
+      "reason": "Şüpheli harici URL veya mesajlaşma bağlantısı tespiti",
+      "is_active": true
+    },
+    {
+      "id": "rule_pii_phone_tr",
+      "pattern": "(?:05\\d{9}|5\\d{9}|\\+905\\d{9})",
+      "category": "PII_LEAK",
+      "score": 0.90,
+      "reason": "Telefon numarası sızıntısı tespiti",
+      "is_active": true
+    },
+    {
+      "id": "rule_hate_speech_tr",
+      "pattern": "(ırkçı|mülteci\\s*düşmanı|nefret\\s*söylemi|defolun\\s*gidin|yaşamaya\\s*hakkı\\s*yok)",
+      "category": "HATE_SPEECH",
+      "score": 0.85,
+      "reason": "Topluluk kurallarına aykırı nefret söylemi tespiti",
+      "is_active": true
+    }
+  ],
+  "sample_texts": [
+    {
+      "label": "Gilded Altın Dikiş & İyileşme",
+      "text": "Yaralarınız, ışığın içeri girdiği yerdir. Kırıldığımız yerlerden daha güçlüyüz."
+    },
+    {
+      "label": "Gilded Toksik Küçümseme",
+      "text": "Sen tam bir ilgi meraklısısın, boş yapma sana müstahak."
+    },
+    {
+      "label": "Leetspeak Küfür Hilesi",
+      "text": "Sen ne s4l4k ve gerizekalı bir insansın amk!"
+    },
+    {
+      "label": "Yasadışı Bahis Spam",
+      "text": "Anında 1000 TL bonus kazanmak için t.me/bahissitesi adresine tıkla!"
+    },
+    {
+      "label": "Örtük Tehdit & Zarar Verme",
+      "text": "Senin nerede oturduğunu biliyorum, akşam evinin önüne geleceğim."
+    }
+  ]
+}

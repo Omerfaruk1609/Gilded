@@ -1,0 +1,29 @@
+{
+  "name": "kintsugi-text-root",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:backend": "npm --workspace=@kintsugi/backend run dev",
+    "dev:playground": "npm --workspace=@kintsugi/playground run dev",
+    "dev:ai": "python apps/ai-service/main.py",
+    "build:shared": "npm --workspace=@kintsugi/shared-types run build",
+    "build:backend": "npm --workspace=@kintsugi/backend run build",
+    "build:playground": "npm --workspace=@kintsugi/playground run build",
+    "seed": "npm --workspace=@kintsugi/backend run seed",
+    "test": "npm run test:backend && npm run test:ai",
+    "test:backend": "npm --workspace=@kintsugi/backend run test",
+    "test:ai": "python -m pytest apps/ai-service/tests",
+    "test:benchmark": "python apps/ai-service/benchmark.py",
+    "test:stress": "node apps/backend/stress-test.js",
+    "test:all": "npm run test && npm run test:benchmark && npm run test:stress",
+    "dev": "npm run build:shared && concurrently \"npm run dev:backend\" \"npm run dev:playground\""
+  },
+  "devDependencies": {
+    "prettier": "^3.2.5",
+    "typescript": "^5.4.5"
+  }
+}
