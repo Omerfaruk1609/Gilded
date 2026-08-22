@@ -24,8 +24,12 @@ export default function FloatingQuickAction() {
   const navigate = useNavigate()
   const open = Boolean(anchorEl)
 
-  const handleClick = (event) => {
-    setAnchorEl(event.currentTarget)
+  const handleToggle = (event) => {
+    if (anchorEl) {
+      setAnchorEl(null)
+    } else {
+      setAnchorEl(event.currentTarget)
+    }
   }
 
   const handleClose = () => {
@@ -33,36 +37,38 @@ export default function FloatingQuickAction() {
   }
 
   const handleAction = (actionKey) => {
-    handleClose()
+    setAnchorEl(null)
     const user = getStoredUser()
 
-    if (actionKey === 'meditation') {
-      setMeditationOpen(true)
-    } else if (actionKey === 'post') {
-      if (!user) {
-        toast('Hikaye paylaşmak için lütfen giriş yapın ✨', { icon: '🔑' })
-        navigate('/login')
-        return
-      }
-      setPostModalOpen(true)
-    } else if (actionKey === 'gallery') {
-      if (!user) {
-        navigate('/login')
-      } else {
-        navigate('/profile?tab=gallery')
-      }
-    } else if (actionKey === 'wisdom') {
-      if (!user) {
-        navigate('/login')
-      } else {
+    switch (actionKey) {
+      case 'meditation':
+        setMeditationOpen(true)
+        break
+      case 'post':
+        if (!user) {
+          toast('Hikaye paylaşmak için lütfen giriş yapın ✨', { icon: '🔑' })
+          navigate('/login')
+          return
+        }
+        setPostModalOpen(true)
+        break
+      case 'gallery':
+        navigate('/galeri')
+        break
+      case 'wisdom':
         navigate('/wisdom')
-      }
-    } else if (actionKey === 'faq') {
-      navigate('/faq')
-    } else if (actionKey === 'about') {
-      navigate('/about')
-    } else if (actionKey === 'scroll_top') {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+        break
+      case 'faq':
+        navigate('/faq')
+        break
+      case 'about':
+        navigate('/about')
+        break
+      case 'scroll_top':
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+        break
+      default:
+        break
     }
   }
 
@@ -76,9 +82,10 @@ export default function FloatingQuickAction() {
           zIndex: 1300
         }}
       >
-        <Tooltip title="Hızlı Kintsugi Menüsü" placement="left">
+        <Tooltip title={open ? '' : 'Hızlı Kintsugi Menüsü'} placement="left" disableHoverListener={open}>
           <Fab
-            onClick={open ? handleClose : handleClick}
+            onClick={handleToggle}
+            aria-label="Hızlı Kintsugi Menüsü"
             sx={{
               bgcolor: '#D4AF37',
               color: '#000',
