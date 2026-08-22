@@ -29,21 +29,21 @@ export default function MeditationModal({ open, onClose }) {
   const timerRef = useRef(null);
 
   // Ses Seçildiğinde (Tıklanınca hemen çalmaya başlar)
-  const handleSelectSound = (sound) => {
+  const handleSelectSound = async (sound) => {
     setSelectedSound(sound);
     ambientAudio.setVolume(volume);
-    ambientAudio.play(sound.id);
+    await ambientAudio.play(sound.id);
     setIsPlaying(true);
   };
 
   // Oynat / Durdur
-  const handlePlayPause = () => {
+  const handlePlayPause = async () => {
     if (isPlaying) {
       ambientAudio.stop();
       setIsPlaying(false);
     } else {
       ambientAudio.setVolume(volume);
-      ambientAudio.play(selectedSound.id);
+      await ambientAudio.play(selectedSound.id);
       setIsPlaying(true);
     }
   };

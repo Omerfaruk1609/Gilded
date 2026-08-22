@@ -13,20 +13,30 @@ class AmbientSoundEngine {
     this.isPlaying = false
   }
 
-  ensureContext() {
-    if (!this.ctx) {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext
-      this.ctx = new AudioCtx()
-    }
-    if (this.ctx.state === 'suspended') {
-      this.ctx.resume()
+  async ensureContext() {
+    try {
+      if (!this.ctx) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext
+        if (AudioCtx) {
+          this.ctx = new AudioCtx()
+        }
+      }
+      if (this.ctx && this.ctx.state === 'suspended') {
+        await this.ctx.resume()
+      }
+    } catch (err) {
+      console.warn('AudioContext resume uyarısı:', err)
     }
   }
 
   setVolume(val) {
     this.volume = Math.max(0, Math.min(1, val))
     if (this.masterGain && this.ctx) {
-      this.masterGain.gain.setValueAtTime(this.volume, this.ctx.currentTime)
+      try {
+        this.masterGain.gain.setValueAtTime(this.volume, this.ctx.currentTime)
+      } catch {
+        // Ignore
+      }
     }
   }
 
@@ -56,31 +66,37 @@ class AmbientSoundEngine {
     }
   }
 
-  play(type) {
-    this.ensureContext()
+  async play(type) {
+    await this.ensureContext()
     this.stop()
 
-    this.isPlaying = true
-    this.currentType = type
+    if (!this.ctx) return
 
-    this.masterGain = this.ctx.createGain()
-    this.masterGain.gain.setValueAtTime(this.volume, this.ctx.currentTime)
-    this.masterGain.connect(this.ctx.destination)
+    try {
+      this.isPlaying = true
+      this.currentType = type
 
-    switch (type) {
-      case 'rain':
-        this.buildRainSound()
-        break
-      case 'ocean':
-        this.buildOceanSound()
-        break
-      case 'forest':
-        this.buildForestSound()
-        break
-      case 'zen':
-      default:
-        this.buildZenSound()
-        break
+      this.masterGain = this.ctx.createGain()
+      this.masterGain.gain.setValueAtTime(this.volume, this.ctx.currentTime)
+      this.masterGain.connect(this.ctx.destination)
+
+      switch (type) {
+        case 'rain':
+          this.buildRainSound()
+          break
+        case 'ocean':
+          this.buildOceanSound()
+          break
+        case 'forest':
+          this.buildForestSound()
+          break
+        case 'zen':
+        default:
+          this.buildZenSound()
+          break
+      }
+    } catch (err) {
+      console.warn('Ses oluşturma hatası:', err)
     }
   }
 

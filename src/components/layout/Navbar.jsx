@@ -6,6 +6,7 @@ import { ThemeContext } from '../../context/ThemeContext'
 import { clearStoredUser, getStoredUser, isAdminUser, logoutUser } from '../../services/auth'
 import NotificationsMenu from './NotificationsMenu'
 import PostModal from '../feed/PostModal'
+import MeditationModal from './MeditationModal'
 import apiClient from '../../services/apiClient'
 import toast from 'react-hot-toast'
 
@@ -14,6 +15,7 @@ function Navbar() {
     const user = getStoredUser()
     const { mode, toggleTheme } = useContext(ThemeContext)
     const [postModalOpen, setPostModalOpen] = useState(false)
+    const [meditationOpen, setMeditationOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const [searchResults, setSearchResults] = useState([])
     const [searchOpen, setSearchOpen] = useState(false)
@@ -281,6 +283,23 @@ function Navbar() {
                         </Button>
 
                         <Button
+                            onClick={() => setMeditationOpen(true)}
+                            sx={{
+                                color: '#94a3b8',
+                                fontWeight: 500,
+                                fontSize: '0.95rem',
+                                letterSpacing: '0.5px',
+                                textTransform: 'none',
+                                '&:hover': {
+                                    color: '#4ADE80',
+                                    backgroundColor: 'transparent'
+                                }
+                            }}
+                        >
+                            Meditasyon 🧘
+                        </Button>
+
+                        <Button
                             component={RouterLink}
                             to="/messages"
                             sx={{
@@ -393,6 +412,7 @@ function Navbar() {
                 )}
             </Toolbar>
             <PostModal open={postModalOpen} onClose={() => setPostModalOpen(false)} />
+            <MeditationModal open={meditationOpen} onClose={() => setMeditationOpen(false)} />
         </AppBar>
     )
 }
