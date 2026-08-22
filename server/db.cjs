@@ -37,6 +37,9 @@ async function initDb() {
       // PostgreSQL üzerinde şemayı çalıştır
       await pool.query(schemaSql);
       await pool.query('ALTER TABLE posts ADD COLUMN IF NOT EXISTS audio_url VARCHAR(255) DEFAULT NULL;');
+      await pool.query('ALTER TABLE notifications ALTER COLUMN post_id DROP NOT NULL;');
+      await pool.query('ALTER TABLE notifications ADD COLUMN IF NOT EXISTS actor_id VARCHAR(255) DEFAULT NULL;');
+      await pool.query('ALTER TABLE notifications ADD COLUMN IF NOT EXISTS message TEXT DEFAULT NULL;');
       console.log('✅ PostgreSQL tabloları kontrol edildi/oluşturuldu.');
     } else {
       console.warn('⚠️ Şema dosyası (schema.sql) bulunamadı.');

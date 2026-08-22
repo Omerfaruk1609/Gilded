@@ -28,20 +28,31 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+const ALLOWED_MIME_TYPES = new Set([
+  'image/jpeg', 'image/png', 'image/webp',
+  'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/webm', 'audio/ogg', 'audio/m4a', 'audio/x-m4a'
+]);
+
+const ALLOWED_EXTENSIONS = new Set([
+  '.jpg', '.jpeg', '.png', '.webp',
+  '.mp3', '.wav', '.webm', '.ogg', '.m4a'
+]);
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname))
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const safeExt = ALLOWED_EXTENSIONS.has(ext) ? ext : '.bin';
+    cb(null, `${Date.now()}-${Math.round(Math.random() * 1E9)}${safeExt}`);
+  }
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowedMimeTypes = [
-    'image/jpeg', 'image/png', 'image/webp',
-    'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/webm', 'audio/ogg', 'audio/m4a', 'audio/x-m4a'
-  ];
-  if (allowedMimeTypes.includes(file.mimetype) || file.mimetype.startsWith('audio/') || file.mimetype.startsWith('image/')) {
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (ALLOWED_MIME_TYPES.has(file.mimetype) && ALLOWED_EXTENSIONS.has(ext)) {
     cb(null, true);
   } else {
-    cb(new Error('Yalnızca görsel (JPEG, PNG, WEBP) veya ses (MP3, WAV, WEBM) formatına izin verilir.'), false);
+    cb(new Error('Yalnızca güvenli görsel (JPEG, PNG, WEBP) veya ses (MP3, WAV, WEBM, OGG, M4A) formatına izin verilir.'), false);
   }
 };
 
@@ -75,11 +86,13 @@ const corsOptions = {
 // HTTP Header Güvenliği (Helmet)
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
-  xContentTypeOptions: true, // Madde 12: nosniff
-  hsts: { maxAge: 31536000, includeSubDomains: true } // Madde 19: HSTS
+  xContentTypeOptions: true, // nosniff
+  hsts: { maxAge: 31536000, includeSubDomains: true }, // HSTS
+  frameguard: { action: 'deny' }, // Clickjacking engeli
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 }));
 
-// 🛡️ Hassas Dosya ve Dizin Koruması (Maddeler 12, 17, 21: .env, .sqlite, .git, .sh engeli)
+// 🛡️ Hassas Dosya ve Dizin Koruması (.env, .sqlite, .git, .sh engeli)
 app.use((req, res, next) => {
   const blockedPattern = /\.(env|sqlite|sql|git|sh|bat|cmd|exe|php|config)(\/|$|\?)/i;
   if (blockedPattern.test(req.path)) {
@@ -89,13 +102,18 @@ app.use((req, res, next) => {
 });
 
 app.use(cors(corsOptions));
-app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  setHeaders: (res) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+  }
+}));
 
 // Rate Limiting (Brute-Force & DoS Koruması)
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Çok fazla istek gönderildi, lütfen biraz sonra tekrar deneyin.' }
@@ -109,7 +127,6 @@ const authLimiter = rateLimit({
   message: { error: 'Çok fazla giriş/kayıt denemesi yapıldı, lütfen 15 dakika sonra tekrar deneyin.' }
 });
 
-// 🛡️ Pahalı Uç Nokta Limiti (Madde 10: AI & Dosya Yükleme Kotaları)
 const aiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 25,
@@ -118,19 +135,34 @@ const aiLimiter = rateLimit({
   message: { error: 'Yapay zeka analiz sınırına ulaştınız. Lütfen biraz sonra tekrar deneyin.' }
 });
 
-const uploadLimiter = rateLimit({
+const createPostLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Dosya yükleme sınırına ulaştınız. Lütfen biraz sonra tekrar deneyin.' }
+  message: { error: 'Çok fazla gönderi paylaştınız. Lütfen biraz bekleyin.' }
+});
+
+const commentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Çok fazla yorum/destek gönderildi. Lütfen biraz bekleyin.' }
+});
+
+const messageLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Mesajlaşma sınırına ulaştınız. Lütfen biraz sonra tekrar deneyin.' }
 });
 
 app.use('/api/', globalLimiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 app.use('/api/posts/:id/philosopher-wisdom', aiLimiter);
-app.use('/api/posts', uploadLimiter);
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -141,6 +173,7 @@ const io = new Server(server, {
   }
 });
 
+const ALLOWED_CIRCLES = new Set(['night_talk', 'meditation', 'stoic_wisdom']);
 
 // Socket.io JWT Kimlik Doğrulama Middleware
 io.use((socket, next) => {
@@ -158,46 +191,61 @@ io.use((socket, next) => {
 });
 
 io.on('connection', (socket) => {
-  console.log('Bir kullanıcı bağlandı (Güvenli):', socket.id, socket.user.email);
+  const userEmail = socket.user.email;
 
   // Kullanıcıyı kendi e-posta adresine ait odaya otomatik olarak al (Güvenli)
-  socket.join(socket.user.email);
-  console.log(`Kullanıcı ${socket.user.email} kendi güvenli odasına otomatik katıldı.`);
+  socket.join(userEmail);
 
-  // Eski join eventi uyumluluk için tutuluyor ancak parametre olarak gelen userId'ye güvenmek yerine socket.user.email kullanılıyor
   socket.on('join', () => {
-    socket.join(socket.user.email);
-    console.log(`Kullanıcı ${socket.user.email} (güvenli) odasına katıldı.`);
+    socket.join(userEmail);
   });
 
   // Topluluk Çemberleri (Live Circles) Socket Etkinlikleri
   socket.on('join_circle', (circleId) => {
+    if (!ALLOWED_CIRCLES.has(circleId)) return;
     socket.join(`circle_${circleId}`);
     io.to(`circle_${circleId}`).emit('circle_user_joined', {
-      user: socket.user.email
+      user: userEmail
     });
   });
 
   socket.on('leave_circle', (circleId) => {
+    if (!ALLOWED_CIRCLES.has(circleId)) return;
     socket.leave(`circle_${circleId}`);
     io.to(`circle_${circleId}`).emit('circle_user_left', {
-      user: socket.user.email
+      user: userEmail
     });
   });
 
-  socket.on('send_circle_message', ({ circleId, text, userName }) => {
+  socket.on('send_circle_message', async ({ circleId, text }) => {
+    if (!ALLOWED_CIRCLES.has(circleId)) return;
+    if (!text || typeof text !== 'string') return;
+    const cleanText = text.trim();
+    if (!cleanText || cleanText.length > 1000) return;
+
+    // İçerik Moderasyon Kontrolü
+    const modResult = await moderateText(cleanText);
+    if (!modResult.isClean) {
+      socket.emit('circle_message_error', {
+        error: modResult.reason || 'Mesajınız topluluk kurallarına uygun bulunmadı.'
+      });
+      return;
+    }
+
+    const verifiedUserName = socket.user.ad || userEmail.split('@')[0];
+
     const msgData = {
       id: Date.now() + Math.random(),
-      sender_email: socket.user.email,
-      sender_name: userName || socket.user.email.split('@')[0],
-      text,
+      sender_email: userEmail,
+      sender_name: verifiedUserName,
+      text: cleanText,
       created_at: new Date().toISOString()
     };
     io.to(`circle_${circleId}`).emit('new_circle_message', msgData);
   });
 
   socket.on('disconnect', () => {
-    console.log('Kullanıcı ayrıldı:', socket.user.email);
+    // Odalardan çıkış Socket.io tarafından yönetilir
   });
 });
 
@@ -220,7 +268,7 @@ const requireAuth = (req, res, next) => {
 };
 
 const requireAdmin = (req, res, next) => {
-  if (req.user && req.user.role === 'ADMIN') {
+  if (req.user && String(req.user.role).toUpperCase() === 'ADMIN') {
     next();
   } else {
     res.status(403).json({ error: 'Bu işlem için yönetici yetkisi gerekiyor.' });
@@ -232,17 +280,18 @@ const requireAdmin = (req, res, next) => {
 // Tüm postları getir
 app.get('/api/posts', async (req, res) => {
   const userId = req.query.userId;
-  const limit = parseInt(req.query.limit) || 10;
-  const offset = parseInt(req.query.offset) || 0;
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 10, 1), 50);
+  const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
 
   try {
-    const postType = req.query.postType || 'normal'; // Varsayılan: normal postlar
+    const postType = req.query.postType === 'wisdom' ? 'wisdom' : 'normal';
     let postsResult;
     const isRepairedFilter = req.query.repaired === 'true' ? 'AND p.is_repaired = TRUE' : '';
 
     if (userId) {
       if (postType === 'wisdom') {
-        if (req.query.categoryId) {
+        const categoryId = req.query.categoryId ? parseInt(req.query.categoryId, 10) : null;
+        if (categoryId && !isNaN(categoryId)) {
           const query = `
             SELECT p.*, u.ad as author_name, u.role as author_role, c.name as category_name,
             (SELECT COUNT(*)::int FROM supports s WHERE s.post_id = p.id AND s.user_id = $1) as has_supported
@@ -256,7 +305,7 @@ app.get('/api/posts', async (req, res) => {
             ORDER BY p.hot_score DESC, p.created_at DESC
             LIMIT $5 OFFSET $6
           `;
-          postsResult = await db.query(query, [userId, postType, req.query.categoryId, userId, limit, offset]);
+          postsResult = await db.query(query, [userId, postType, categoryId, userId, limit, offset]);
         } else {
           const query = `
             SELECT p.*, u.ad as author_name, u.role as author_role, c.name as category_name,
@@ -308,7 +357,8 @@ app.get('/api/posts', async (req, res) => {
     
     res.json(postsResult.rows);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Gönderiler getirilirken hata:', error);
+    res.status(500).json({ error: 'Gönderiler yüklenirken bir hata oluştu.' });
   }
 });
 
@@ -325,7 +375,8 @@ app.get('/api/users/:email/posts', async (req, res) => {
     `, [email]);
     res.json(result.rows);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Kullanıcı gönderileri getirme hatası:', error);
+    res.status(500).json({ error: 'Kullanıcı gönderileri alınamadı.' });
   }
 });
 
@@ -340,13 +391,15 @@ app.get('/api/users/:email/stats', async (req, res) => {
       given: totalGiven.rows[0]?.total || 0
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Kullanıcı istatistik hatası:', error);
+    res.status(500).json({ error: 'İstatistikler alınamadı.' });
   }
 });
 
 // Tekil post getir
 app.get('/api/posts/:id', async (req, res) => {
-  const { id } = req.params;
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Geçersiz gönderi kimliği.' });
   const userId = req.query.userId;
   
   try {
@@ -373,13 +426,16 @@ app.get('/api/posts/:id', async (req, res) => {
     if (!post) return res.status(404).json({ error: 'Post bulunamadı' });
     res.json(post);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Gönderi detay hatası:', error);
+    res.status(500).json({ error: 'Gönderi detayları yüklenemedi.' });
   }
 });
 
 // Post için felsefi tavsiye / kadim bilgelik üret
 app.post('/api/posts/:id/philosopher-wisdom', requireAuth, async (req, res) => {
-  const { id } = req.params;
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Geçersiz gönderi kimliği.' });
+
   try {
     const postRes = await db.query('SELECT * FROM posts WHERE id = $1', [id]);
     const post = postRes.rows[0];
@@ -388,13 +444,17 @@ app.post('/api/posts/:id/philosopher-wisdom', requireAuth, async (req, res) => {
     const wisdom = await generatePhilosopherWisdom(post.content, post.mood);
     res.json(wisdom);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Felsefi bilgelik üretme hatası:', error);
+    res.status(500).json({ error: 'Felsefi tavsiye oluşturulurken bir hata oluştu.' });
   }
 });
 
 // Bir postun yorumlarını getir
 app.get('/api/posts/:id/comments', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Geçersiz gönderi kimliği.' });
   const userId = req.query.userId || null;
+
   try {
     const query = `
       SELECT c.*, u.ad as author_name,
@@ -404,20 +464,21 @@ app.get('/api/posts/:id/comments', async (req, res) => {
       WHERE c.post_id = $1 
       ORDER BY c.created_at ASC
     `;
-    const result = await db.query(query, [req.params.id, userId]);
+    const result = await db.query(query, [id, userId]);
     res.json(result.rows);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Yorumları getirme hatası:', error);
+    res.status(500).json({ error: 'Yorumlar yüklenemedi.' });
   }
 });
 
-// Yeni post ekle (Multer hata yakalama mekanizmalı sarmalayıcı ile)
+// Yeni post ekle (Multer hata yakalama mekanizmalı sarmalayıcı ve Rate Limit ile)
 const uploadSingleImage = upload.single('image');
-app.post('/api/posts', requireAuth, (req, res, next) => {
+app.post('/api/posts', requireAuth, createPostLimiter, (req, res, next) => {
   uploadSingleImage(req, res, (err) => {
     if (err instanceof multer.MulterError) {
       if (err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(400).json({ error: 'Görsel boyutu çok büyük. Maksimum limit 5MB\'dır.' });
+        return res.status(400).json({ error: 'Görsel boyutu çok büyük. Maksimum limit 10MB\'dır.' });
       }
       return res.status(400).json({ error: `Görsel yükleme hatası: ${err.message}` });
     } else if (err) {
@@ -428,12 +489,21 @@ app.post('/api/posts', requireAuth, (req, res, next) => {
 }, async (req, res) => {
   const { content, post_type = 'normal', category_id = null, is_anonymous = 1, mood = null } = req.body;
   const author_id = req.user.email; // JWT'den alınan kimlik
+
+  if (!content || typeof content !== 'string' || !content.trim()) {
+    return res.status(400).json({ error: 'İçerik gerekli' });
+  }
+
+  const cleanContent = content.trim();
+  if (cleanContent.length > 5000) {
+    return res.status(400).json({ error: 'Gönderi içeriği en fazla 5000 karakter olabilir.' });
+  }
+
   const isAudio = req.file && (req.file.mimetype.startsWith('audio/') || ['.mp3', '.wav', '.webm', '.m4a', '.ogg'].includes(path.extname(req.file.filename).toLowerCase()));
   const image_url = req.file && !isAudio ? `/uploads/${req.file.filename}` : null;
   const audio_url = req.file && isAudio ? `/uploads/${req.file.filename}` : null;
-  if (!content) return res.status(400).json({ error: 'İçerik gerekli' });
 
-  const modCheck = await moderateText(content);
+  const modCheck = await moderateText(cleanContent);
   if (!modCheck.isClean) {
     return res.status(400).json({ 
       error: modCheck.reason || 'Topluluk kurallarına aykırı ifade tespit edildi.',
@@ -447,13 +517,17 @@ app.post('/api/posts', requireAuth, (req, res, next) => {
     const user = userRes.rows[0];
     if (!user) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
 
-    if (post_type === 'wisdom' && user.role !== 'ADMIN' && user.role !== 'BILGE') {
+    const userRole = String(user.role || '').toUpperCase();
+
+    if (post_type === 'wisdom' && userRole !== 'ADMIN' && userRole !== 'BILGE') {
       return res.status(403).json({ error: 'Bilgelik sözü paylaşma yetkiniz yok.' });
     }
 
+    const safeCatId = category_id ? parseInt(category_id, 10) : null;
+
     // Bilge ise sadece kendisinin açtığı kategorilere atabilir
-    if (post_type === 'wisdom' && user.role === 'BILGE' && category_id) {
-      const catRes = await db.query('SELECT created_by FROM wisdom_categories WHERE id = $1', [category_id]);
+    if (post_type === 'wisdom' && userRole === 'BILGE' && safeCatId) {
+      const catRes = await db.query('SELECT created_by FROM wisdom_categories WHERE id = $1', [safeCatId]);
       const category = catRes.rows[0];
       if (!category || category.created_by !== author_id) {
         return res.status(403).json({ error: 'Sadece kendi oluşturduğunuz kategorilerde paylaşım yapabilirsiniz.' });
@@ -461,21 +535,26 @@ app.post('/api/posts', requireAuth, (req, res, next) => {
     }
 
     const isAnonBool = (is_anonymous === '1' || is_anonymous === 1 || is_anonymous === 'true' || is_anonymous === true);
+    const safeMood = typeof mood === 'string' ? mood.slice(0, 50) : null;
+    const safePostType = post_type === 'wisdom' ? 'wisdom' : 'normal';
+
     const insertQuery = `
       INSERT INTO posts (content, author_id, image_url, audio_url, post_type, is_anonymous, category_id, mood) 
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
       RETURNING *
     `;
-    const insertRes = await db.query(insertQuery, [content, author_id, image_url, audio_url, post_type, isAnonBool, category_id ? parseInt(category_id) : null, mood]);
+    const insertRes = await db.query(insertQuery, [cleanContent, author_id, image_url, audio_url, safePostType, isAnonBool, safeCatId, safeMood]);
     res.status(201).json(insertRes.rows[0]);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Gönderi oluşturma hatası:', error);
+    res.status(500).json({ error: 'Gönderi oluşturulurken bir hata meydana geldi.' });
   }
 });
 
 // Dikiş At (Destekle) - Her kullanıcı bir kez atabilir
-app.post('/api/posts/:id/support', requireAuth, async (req, res) => {
-  const { id } = req.params;
+app.post('/api/posts/:id/support', requireAuth, commentLimiter, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Geçersiz gönderi kimliği.' });
   const user_id = req.user.email; // JWT'den alınan kimlik
 
   try {
@@ -520,19 +599,29 @@ app.post('/api/posts/:id/support', requireAuth, async (req, res) => {
 
     res.json(updatedPostRes.rows[0]);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Destek atma hatası:', error);
+    res.status(500).json({ error: 'Destek işlemi gerçekleştirilemedi.' });
   }
 });
 
 // Yorum At
-app.post('/api/posts/:id/comments', requireAuth, async (req, res) => {
-  const { id } = req.params;
+app.post('/api/posts/:id/comments', requireAuth, commentLimiter, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Geçersiz gönderi kimliği.' });
+
   const { content } = req.body;
   const author_id = req.user.email; // JWT'den alınan kimlik
   
-  if (!content) return res.status(400).json({ error: 'Mesaj içeriği gerekli' });
+  if (!content || typeof content !== 'string' || !content.trim()) {
+    return res.status(400).json({ error: 'Mesaj içeriği gerekli' });
+  }
+
+  const cleanContent = content.trim();
+  if (cleanContent.length > 1500) {
+    return res.status(400).json({ error: 'Yorum en fazla 1500 karakter olabilir.' });
+  }
   
-  const modCheck = await moderateText(content);
+  const modCheck = await moderateText(cleanContent);
   if (!modCheck.isClean) {
     return res.status(400).json({ 
       error: modCheck.reason || 'Bu mesaj topluluk ruhuna (destekleyici ve iyileştirici olma) uygun bulunmadı. Lütfen daha nazik ve destekleyici bir dil kullanmayı dene.',
@@ -541,18 +630,18 @@ app.post('/api/posts/:id/comments', requireAuth, async (req, res) => {
   }
 
   try {
-    const parentId = req.body.parent_id || null;
+    const parentId = req.body.parent_id ? parseInt(req.body.parent_id, 10) : null;
 
     await db.query(
       'INSERT INTO comments (post_id, content, author_id, parent_id, is_anonymous) VALUES ($1, $2, $3, $4, $5)',
-      [id, content, author_id, parentId, true]
+      [id, cleanContent, author_id, parentId && !isNaN(parentId) ? parentId : null, true]
     );
     
     // Bildirim oluştur
     const postRes = await db.query('SELECT author_id FROM posts WHERE id = $1', [id]);
     const post = postRes.rows[0];
 
-    if (parentId) {
+    if (parentId && !isNaN(parentId)) {
       const parentCommentRes = await db.query('SELECT author_id FROM comments WHERE id = $1', [parentId]);
       const parentComment = parentCommentRes.rows[0];
       if (parentComment && parentComment.author_id !== author_id) {
@@ -588,44 +677,55 @@ app.post('/api/posts/:id/comments', requireAuth, async (req, res) => {
     
     res.json(allCommentsRes.rows);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Yorum ekleme hatası:', error);
+    res.status(500).json({ error: 'Yorum kaydedilemedi.' });
   }
 });
 
 // Altın Yaprak Ver (Teşekkür)
-app.post('/api/comments/:id/gold-leaf', requireAuth, async (req, res) => {
-  const { id } = req.params;
+app.post('/api/comments/:id/gold-leaf', requireAuth, commentLimiter, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Geçersiz yorum kimliği.' });
+
   try {
     await db.query('UPDATE comments SET gold_leaves = gold_leaves + 1 WHERE id = $1', [id]);
     const commentRes = await db.query('SELECT * FROM comments WHERE id = $1', [id]);
+    if (!commentRes.rows[0]) return res.status(404).json({ error: 'Yorum bulunamadı.' });
     res.json(commentRes.rows[0]);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Altın yaprak hatası:', error);
+    res.status(500).json({ error: 'İşlem gerçekleştirilemedi.' });
   }
 });
 
 // Post Sil
 app.delete('/api/posts/:id', requireAuth, async (req, res) => {
-  const { id } = req.params;
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Geçersiz gönderi kimliği.' });
+
   try {
     const postRes = await db.query('SELECT author_id FROM posts WHERE id = $1', [id]);
     const post = postRes.rows[0];
     if (!post) return res.status(404).json({ error: 'Post bulunamadı' });
 
-    if (post.author_id !== req.user.email && req.user.role !== 'ADMIN') {
+    const userRole = String(req.user.role || '').toUpperCase();
+    if (post.author_id !== req.user.email && userRole !== 'ADMIN') {
       return res.status(403).json({ error: 'Bu postu silme yetkiniz yok.' });
     }
 
     await db.query('DELETE FROM posts WHERE id = $1', [id]);
     res.json({ message: 'Post silindi' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Post silme hatası:', error);
+    res.status(500).json({ error: 'Gönderi silinemedi.' });
   }
 });
 
 // Yorum Sil
 app.delete('/api/comments/:id', requireAuth, async (req, res) => {
-  const { id } = req.params;
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Geçersiz yorum kimliği.' });
+
   try {
     const commentRes = await db.query(`
       SELECT c.author_id, p.author_id as post_author_id 
@@ -636,20 +736,24 @@ app.delete('/api/comments/:id', requireAuth, async (req, res) => {
     const comment = commentRes.rows[0];
     if (!comment) return res.status(404).json({ error: 'Yorum bulunamadı' });
 
-    if (comment.author_id !== req.user.email && comment.post_author_id !== req.user.email && req.user.role !== 'ADMIN') {
+    const userRole = String(req.user.role || '').toUpperCase();
+    if (comment.author_id !== req.user.email && comment.post_author_id !== req.user.email && userRole !== 'ADMIN') {
       return res.status(403).json({ error: 'Bu yorumu silme yetkiniz yok.' });
     }
 
     await db.query('DELETE FROM comments WHERE id = $1', [id]);
     res.json({ message: 'Yorum silindi' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Yorum silme hatası:', error);
+    res.status(500).json({ error: 'Yorum silinemedi.' });
   }
 });
 
 // Yorum Puanla (Vote)
-app.post('/api/comments/:id/vote', requireAuth, async (req, res) => {
-  const { id } = req.params;
+app.post('/api/comments/:id/vote', requireAuth, commentLimiter, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Geçersiz yorum kimliği.' });
+
   const { type } = req.body; // 'up' veya 'down'
   const userId = req.user.email;
 
@@ -697,7 +801,8 @@ app.post('/api/comments/:id/vote', requireAuth, async (req, res) => {
 
     res.json(allCommentsRes.rows);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Yorum oylama hatası:', error);
+    res.status(500).json({ error: 'Oy işlemi tamamlanamadı.' });
   }
 });
 
@@ -712,22 +817,26 @@ app.get('/api/notifications/:email', requireAuth, async (req, res) => {
 
   try {
     const notificationsRes = await db.query(`
-      SELECT n.*, p.content as post_content 
+      SELECT n.*, p.content as post_content, u.ad as actor_name 
       FROM notifications n 
       LEFT JOIN posts p ON n.post_id = p.id 
+      LEFT JOIN users u ON n.actor_id = u.email
       WHERE n.user_id = $1 
       ORDER BY n.created_at DESC 
       LIMIT 20
     `, [email]);
     res.json(notificationsRes.rows);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Bildirim getirme hatası:', error);
+    res.status(500).json({ error: 'Bildirimler yüklenemedi.' });
   }
 });
 
 // Bildirimi okundu olarak işaretle
 app.put('/api/notifications/:id/read', requireAuth, async (req, res) => {
-  const { id } = req.params;
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Geçersiz bildirim kimliği.' });
+
   try {
     const notifRes = await db.query('SELECT * FROM notifications WHERE id = $1', [id]);
     const notif = notifRes.rows[0];
@@ -741,51 +850,66 @@ app.put('/api/notifications/:id/read', requireAuth, async (req, res) => {
     await db.query('UPDATE notifications SET is_read = TRUE WHERE id = $1', [id]);
     res.json({ message: 'Okundu' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Bildirim güncelleme hatası:', error);
+    res.status(500).json({ error: 'Bildirim güncellenemedi.' });
   }
 });
 
 // --- AUTH ENDPOINTS ---
 
-// 🛡️ Kayıt Ol (Madde 2: Mass Assignment Koruması - Rol ve ID enjeksiyonu engellendi)
-app.post('/api/auth/register', async (req, res) => {
+// 🛡️ Kayıt Ol (Mass Assignment Koruması, Girdi Doğrulaması)
+app.post('/api/auth/register', authLimiter, async (req, res) => {
   const { email, password, ad } = req.body;
-  if (!email || !password || !ad) {
+  if (!email || !password || !ad || typeof email !== 'string' || typeof password !== 'string' || typeof ad !== 'string') {
     return res.status(400).json({ error: 'Tüm alanlar zorunludur' });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanAd = ad.trim();
+
+  if (cleanAd.length > 100) {
+    return res.status(400).json({ error: 'İsim en fazla 100 karakter olabilir.' });
+  }
+
+  if (password.length < 6 || password.length > 128) {
+    return res.status(400).json({ error: 'Şifre en az 6, en fazla 128 karakter olmalıdır.' });
   }
 
   // E-posta formatı kontrolü
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
+  if (!emailRegex.test(cleanEmail)) {
     return res.status(400).json({ error: 'Geçerli bir e-posta adresi giriniz' });
   }
 
   try {
     // Kullanıcı var mı kontrol et
-    const existingRes = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    const existingRes = await db.query('SELECT id FROM users WHERE email = $1', [cleanEmail]);
     if (existingRes.rows[0]) return res.status(400).json({ error: 'Bu e-posta zaten kullanımda' });
 
     // Şifreyi hashle
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Kaydet - Rol her zaman varsayılan 'USER' olarak yazılır
-    await db.query('INSERT INTO users (email, password, ad, role) VALUES ($1, $2, $3, $4)', [email, hashedPassword, ad, 'USER']);
+    await db.query('INSERT INTO users (email, password, ad, role) VALUES ($1, $2, $3, $4)', [cleanEmail, hashedPassword, cleanAd, 'USER']);
 
     res.status(201).json({ message: 'Kayıt başarılı' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Kayıt hatası:', error);
+    res.status(500).json({ error: 'Kayıt işlemi sırasında bir hata oluştu.' });
   }
 });
 
-// 🛡️ Giriş Yap (Madde 3: Token ömrünü 24 saate optimize et & Madde 8: E-posta ifşası önleme)
-app.post('/api/auth/login', async (req, res) => {
+// 🛡️ Giriş Yap (Brute-Force Koruması, Zamanlama Saldırısı Koruması)
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password) {
+  if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
     return res.status(400).json({ error: 'E-posta ve şifre gerekli' });
   }
 
+  const cleanEmail = email.trim().toLowerCase();
+
   try {
-    const userRes = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    const userRes = await db.query('SELECT * FROM users WHERE email = $1', [cleanEmail]);
     const user = userRes.rows[0];
     if (!user) return res.status(400).json({ error: 'Hatalı e-posta veya şifre' });
 
@@ -795,24 +919,24 @@ app.post('/api/auth/login', async (req, res) => {
 
     const { password: _, ...userWithoutPassword } = user;
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, role: String(user.role || 'USER').toUpperCase() },
       JWT_SECRET,
-      { expiresIn: '24h' } // Madde 3: Güvenli token süresi
+      { expiresIn: '24h' }
     );
 
     res.json({ ...userWithoutPassword, token });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Giriş hatası:', error);
+    res.status(500).json({ error: 'Giriş yapılırken bir hata oluştu.' });
   }
 });
 
-// 🛡️ Çıkış Yap (Madde 4: Çıkışta Oturumu Düşür)
+// 🛡️ Çıkış Yap
 app.post('/api/auth/logout', requireAuth, (req, res) => {
-  // Frontend token'ı localStorage/Cookie'den silerken, backend de oturum sonlandırma onayını döner
   res.json({ success: true, message: 'Oturum güvenli bir şekilde kapatıldı.' });
 });
 
-// 🛡️ Hesabı Gerçekten Sil (Madde 21: GDPR / KVKK Unutulma Hakkı & Cascade Silme)
+// 🛡️ Hesabı Gerçekten Sil (GDPR / KVKK Unutulma Hakkı & Güvenli Cascade Silme)
 app.delete('/api/users/me', requireAuth, async (req, res) => {
   const userEmail = req.user?.email;
   if (!userEmail) {
@@ -821,28 +945,28 @@ app.delete('/api/users/me', requireAuth, async (req, res) => {
 
   try {
     // 1. Kullanıcının bildirimlerini sil
-    await db.query('DELETE FROM notifications WHERE user_email = $1 OR actor_email = $1', [userEmail]);
+    await db.query('DELETE FROM notifications WHERE user_id = $1', [userEmail]);
 
     // 2. Kullanıcının takip ilişkilerini sil
-    await db.query('DELETE FROM follows WHERE follower_email = $1 OR following_email = $1', [userEmail]);
+    await db.query('DELETE FROM user_follows WHERE follower_id = $1 OR following_id = $1', [userEmail]);
 
-    // 3. Kullanıcının beğeni / desteklerini sil
+    // 3. Kullanıcının bilgelik kategori takiplerini sil
+    await db.query('DELETE FROM follows WHERE user_id = $1', [userEmail]);
+
+    // 4. Kullanıcının beğeni / desteklerini sil
     await db.query('DELETE FROM supports WHERE user_id = $1', [userEmail]);
 
-    // 4. Kullanıcının yorum oylarını sil
-    await db.query('DELETE FROM comment_votes WHERE user_email = $1', [userEmail]);
+    // 5. Kullanıcının yorum oylarını sil
+    await db.query('DELETE FROM comment_votes WHERE user_id = $1', [userEmail]);
 
-    // 5. Kullanıcının yorumlarını sil
+    // 6. Kullanıcının yorumlarını sil
     await db.query('DELETE FROM comments WHERE author_id = $1', [userEmail]);
 
-    // 6. Kullanıcının gönderilerini sil
+    // 7. Kullanıcının gönderilerini sil
     await db.query('DELETE FROM posts WHERE author_id = $1', [userEmail]);
 
-    // 7. Kullanıcının bilgelik takip kayıtlarını sil
-    await db.query('DELETE FROM user_category_follows WHERE user_id = $1', [userEmail]);
-
     // 8. Kullanıcının anlık mesajlarını sil
-    await db.query('DELETE FROM direct_messages WHERE sender_email = $1 OR receiver_email = $1', [userEmail]);
+    await db.query('DELETE FROM messages WHERE sender_id = $1 OR receiver_id = $1', [userEmail]);
 
     // 9. Kullanıcı ana kaydını sil
     await db.query('DELETE FROM users WHERE email = $1', [userEmail]);
@@ -855,21 +979,23 @@ app.delete('/api/users/me', requireAuth, async (req, res) => {
   }
 });
 
-// Kullanıcı arama (Ruh Arama ve Keşif)
+// Kullanıcı arama (Ruh Arama ve Keşif - SQL Wildcard ve Enjeksiyon Korumalı)
 app.get('/api/users/search', async (req, res) => {
   const { q, currentUserId } = req.query;
-  if (!q || !q.trim()) return res.json([]);
+  if (!q || typeof q !== 'string' || !q.trim()) return res.json([]);
 
-  const searchTerm = `%${q.trim()}%`;
-  const currentUser = req.user?.email || currentUserId || '';
+  // SQL LIKE karakterlerini escape et (%, _, \)
+  const sanitizedTerm = q.trim().replace(/[%_\\]/g, '\\$&');
+  const searchTerm = `%${sanitizedTerm}%`;
+  const currentUser = req.user?.email || (typeof currentUserId === 'string' ? currentUserId.trim() : '');
 
   try {
     const query = `
       SELECT u.id, u.email, u.ad, u.role, u.created_at,
-      (SELECT COUNT(*) FROM follows WHERE follower_email = u.email) as following_count,
-      (SELECT COUNT(*) FROM follows WHERE following_email = u.email) as follower_count
+      (SELECT COUNT(*)::int FROM user_follows WHERE following_id = u.email) as follower_count,
+      (SELECT COUNT(*)::int FROM user_follows WHERE follower_id = u.email) as following_count
       FROM users u
-      WHERE (LOWER(u.ad) LIKE LOWER($1) OR LOWER(u.email) LIKE LOWER($1))
+      WHERE (LOWER(u.ad) LIKE LOWER($1) ESCAPE '\\' OR LOWER(u.email) LIKE LOWER($1) ESCAPE '\\')
       AND (u.email != $2 OR $2 = '')
       LIMIT 20
     `;
@@ -881,7 +1007,7 @@ app.get('/api/users/search', async (req, res) => {
         let is_following = false;
         if (currentUser) {
           const followCheck = await db.query(
-            'SELECT 1 FROM follows WHERE follower_email = $1 AND following_email = $2 LIMIT 1',
+            'SELECT 1 FROM user_follows WHERE follower_id = $1 AND following_id = $2 LIMIT 1',
             [currentUser, u.email]
           );
           is_following = followCheck.rows.length > 0;
@@ -904,7 +1030,7 @@ app.get('/api/users/search', async (req, res) => {
 
 // --- ADMIN ENDPOINTS ---
 
-// 🛡️ Manuel / Otomatik Yedekleme Tetikleyici (Madde 20)
+// 🛡️ Manuel / Otomatik Yedekleme Tetikleyici
 app.post('/api/admin/backup', requireAuth, requireAdmin, (req, res) => {
   const { backupDatabase } = require('./utils/backupDb.cjs');
   const result = backupDatabase();
@@ -930,7 +1056,8 @@ app.get('/api/admin/stats', requireAuth, requireAdmin, async (req, res) => {
       totalSupports: totalSupports.rows[0].count 
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Admin istatistik hatası:', error);
+    res.status(500).json({ error: 'İstatistikler alınamadı.' });
   }
 });
 
@@ -940,20 +1067,30 @@ app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
     const users = await db.query('SELECT id, email, ad, role, created_at FROM users ORDER BY created_at DESC');
     res.json(users.rows);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Admin kullanıcıları listeleme hatası:', error);
+    res.status(500).json({ error: 'Kullanıcılar getirilemedi.' });
   }
 });
 
-// Kullanıcı rolünü güncelle
+// Kullanıcı rolünü güncelle (Role Whitelist Doğrulamalı)
 app.put('/api/admin/users/:id/role', requireAuth, requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Geçersiz kullanıcı kimliği.' });
+
   const { role } = req.body;
-  const { id } = req.params;
+  const ALLOWED_ROLES = ['USER', 'ADMIN', 'BILGE'];
+  const normalizedRole = String(role || '').trim().toUpperCase();
+
+  if (!ALLOWED_ROLES.includes(normalizedRole)) {
+    return res.status(400).json({ error: `Geçersiz rol. İzin verilen roller: ${ALLOWED_ROLES.join(', ')}` });
+  }
 
   try {
-    await db.query('UPDATE users SET role = $1 WHERE id = $2', [role, id]);
-    res.json({ message: 'Rol güncellendi' });
+    await db.query('UPDATE users SET role = $1 WHERE id = $2', [normalizedRole, id]);
+    res.json({ message: 'Rol başarıyla güncellendi' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Admin rol güncelleme hatası:', error);
+    res.status(500).json({ error: 'Rol güncellenemedi.' });
   }
 });
 
@@ -982,22 +1119,30 @@ app.get('/api/wisdom/categories', async (req, res) => {
     }
     res.json(categories);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Bilgelik kategorileri hatası:', error);
+    res.status(500).json({ error: 'Kategoriler yüklenemedi.' });
   }
 });
 
 app.post('/api/wisdom/categories', requireAuth, async (req, res) => {
   const { name } = req.body;
   const userId = req.user.email; // JWT'den alınan email
-  if (!name) return res.status(400).json({ error: 'Kategori adı gerekli' });
-  const slug = name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+  if (!name || typeof name !== 'string' || !name.trim()) {
+    return res.status(400).json({ error: 'Kategori adı gerekli' });
+  }
+
+  const cleanName = name.trim().slice(0, 100);
+  const slug = cleanName.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+
   try {
-    // Yetki Kontrolü: Admin değilse toplam kullanıcı sayısı kadar pozitif yorum skoru gerekiyor
+    // Yetki Kontrolü
     const userRes = await db.query('SELECT role FROM users WHERE email = $1', [userId]);
     const user = userRes.rows[0];
     if (!user) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
 
-    if (user.role !== 'ADMIN') {
+    const userRole = String(user.role || '').toUpperCase();
+
+    if (userRole !== 'ADMIN') {
       const totalUsersRes = await db.query('SELECT COUNT(*)::int as count FROM users');
       const totalUsers = totalUsersRes.rows[0].count;
 
@@ -1010,26 +1155,29 @@ app.post('/api/wisdom/categories', requireAuth, async (req, res) => {
         });
       }
 
-      // Koşulu sağlıyorsa ve 'user' rolündeyse 'BILGE' yapalım
-      if (user.role === 'user') {
+      // Koşulu sağlıyorsa 'BILGE' yapalım
+      if (userRole === 'USER') {
         await db.query("UPDATE users SET role = 'BILGE' WHERE email = $1", [userId]);
       }
     }
 
-    const info = await db.query('INSERT INTO wisdom_categories (name, slug, created_by) VALUES ($1, $2, $3) RETURNING *', [name, slug, userId]);
+    const info = await db.query('INSERT INTO wisdom_categories (name, slug, created_by) VALUES ($1, $2, $3) RETURNING *', [cleanName, slug, userId]);
     res.status(201).json(info.rows[0]);
   } catch (error) {
     if (error.message.includes('unique') || error.message.includes('UNIQUE')) {
-      const existing = await db.query('SELECT * FROM wisdom_categories WHERE name = $1', [name]);
+      const existing = await db.query('SELECT * FROM wisdom_categories WHERE name = $1', [cleanName]);
       return res.json(existing.rows[0]);
     }
-    res.status(500).json({ error: error.message });
+    console.error('Kategori oluşturma hatası:', error);
+    res.status(500).json({ error: 'Kategori oluşturulamadı.' });
   }
 });
 
 app.post('/api/wisdom/follow', requireAuth, async (req, res) => {
-  const userId = req.user.email; // JWT'den
-  const { categoryId } = req.body;
+  const userId = req.user.email;
+  const categoryId = parseInt(req.body.categoryId, 10);
+  if (isNaN(categoryId)) return res.status(400).json({ error: 'Geçersiz kategori kimliği.' });
+
   try {
     const existing = await db.query('SELECT * FROM follows WHERE user_id = $1 AND category_id = $2', [userId, categoryId]);
     if (existing.rows[0]) {
@@ -1040,17 +1188,21 @@ app.post('/api/wisdom/follow', requireAuth, async (req, res) => {
       res.json({ message: 'Takip ediliyor', is_followed: true });
     }
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Kategori takip hatası:', error);
+    res.status(500).json({ error: 'Takip işlemi gerçekleştirilemedi.' });
   }
 });
 
 app.delete('/api/wisdom/categories/:id', requireAuth, requireAdmin, async (req, res) => {
-  const { id } = req.params;
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Geçersiz kategori kimliği.' });
+
   try {
     await db.query('DELETE FROM wisdom_categories WHERE id = $1', [id]);
     res.json({ message: 'Kategori silindi' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Kategori silme hatası:', error);
+    res.status(500).json({ error: 'Kategori silinemedi.' });
   }
 });
 
@@ -1060,20 +1212,27 @@ app.post('/api/users/follow', requireAuth, async (req, res) => {
   const followerEmail = req.user.email;
   const { followingEmail } = req.body;
   
-  if (!followingEmail) return res.status(400).json({ error: 'Takip edilecek kullanıcı gerekli' });
-  if (followerEmail === followingEmail) return res.status(400).json({ error: 'Kendinizi takip edemezsiniz' });
+  if (!followingEmail || typeof followingEmail !== 'string') {
+    return res.status(400).json({ error: 'Takip edilecek kullanıcı gerekli' });
+  }
+  const cleanFollowingEmail = followingEmail.trim().toLowerCase();
+
+  if (followerEmail === cleanFollowingEmail) {
+    return res.status(400).json({ error: 'Kendinizi takip edemezsiniz' });
+  }
 
   try {
-    const existing = await db.query('SELECT * FROM user_follows WHERE follower_id = $1 AND following_id = $2', [followerEmail, followingEmail]);
+    const existing = await db.query('SELECT * FROM user_follows WHERE follower_id = $1 AND following_id = $2', [followerEmail, cleanFollowingEmail]);
     if (existing.rows[0]) {
-      await db.query('DELETE FROM user_follows WHERE follower_id = $1 AND following_id = $2', [followerEmail, followingEmail]);
+      await db.query('DELETE FROM user_follows WHERE follower_id = $1 AND following_id = $2', [followerEmail, cleanFollowingEmail]);
       res.json({ message: 'Takibi bıraktı', is_followed: false });
     } else {
-      await db.query('INSERT INTO user_follows (follower_id, following_id) VALUES ($1, $2)', [followerEmail, followingEmail]);
+      await db.query('INSERT INTO user_follows (follower_id, following_id) VALUES ($1, $2)', [followerEmail, cleanFollowingEmail]);
       res.json({ message: 'Takip edildi', is_followed: true });
     }
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Kullanıcı takip hatası:', error);
+    res.status(500).json({ error: 'Takip işlemi yapılamadı.' });
   }
 });
 
@@ -1103,7 +1262,8 @@ app.get('/api/users/:email/network', async (req, res) => {
       is_following
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Kullanıcı ağı hatası:', error);
+    res.status(500).json({ error: 'Kullanıcı bağlantıları alınamadı.' });
   }
 });
 
@@ -1130,19 +1290,31 @@ app.get('/api/messages/:otherEmail', requireAuth, async (req, res) => {
 
     res.json(result.rows);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Mesajları getirme hatası:', error);
+    res.status(500).json({ error: 'Mesajlar alınamadı.' });
   }
 });
 
-app.post('/api/messages', requireAuth, async (req, res) => {
+app.post('/api/messages', requireAuth, messageLimiter, async (req, res) => {
   const senderEmail = req.user.email;
   const { receiverEmail, content } = req.body;
 
-  if (!receiverEmail || !content) {
+  if (!receiverEmail || !content || typeof receiverEmail !== 'string' || typeof content !== 'string') {
     return res.status(400).json({ error: 'Alıcı ve mesaj içeriği gerekli' });
   }
 
-  const modCheck = await moderateText(content);
+  const cleanReceiver = receiverEmail.trim().toLowerCase();
+  const cleanContent = content.trim();
+
+  if (senderEmail === cleanReceiver) {
+    return res.status(400).json({ error: 'Kendinize mesaj gönderemezsiniz.' });
+  }
+
+  if (cleanContent.length > 2000) {
+    return res.status(400).json({ error: 'Mesaj en fazla 2000 karakter olabilir.' });
+  }
+
+  const modCheck = await moderateText(cleanContent);
   if (!modCheck.isClean) {
     return res.status(400).json({ 
       error: modCheck.reason || 'Mesajınız topluluk kurallarına aykırı ifade içeriyor.',
@@ -1153,18 +1325,36 @@ app.post('/api/messages', requireAuth, async (req, res) => {
   try {
     const result = await db.query(
       'INSERT INTO messages (sender_id, receiver_id, content) VALUES ($1, $2, $3) RETURNING *',
-      [senderEmail, receiverEmail, content]
+      [senderEmail, cleanReceiver, cleanContent]
     );
     const newMessage = result.rows[0];
+    const senderDisplayName = req.user.ad || senderEmail.split('@')[0];
 
-    io.to(receiverEmail).emit('new_message', {
+    // 1. Veritabanına bildirim kaydet
+    await db.query(
+      'INSERT INTO notifications (user_id, type, actor_id, message) VALUES ($1, $2, $3, $4)',
+      [cleanReceiver, 'message', senderEmail, cleanContent.slice(0, 100)]
+    );
+
+    // 2. Real-time mesaj socket eventi gönder
+    io.to(cleanReceiver).emit('new_message', {
       ...newMessage,
-      sender_name: req.user.ad || senderEmail.split('@')[0]
+      sender_name: senderDisplayName
+    });
+
+    // 3. Real-time bildirim socket eventi gönder
+    io.to(cleanReceiver).emit('new_notification', {
+      type: 'message',
+      actor_id: senderEmail,
+      sender_name: senderDisplayName,
+      message: `${senderDisplayName} size bir mesaj gönderdi ✨`,
+      timestamp: new Date()
     });
 
     res.status(201).json(newMessage);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Mesaj gönderme hatası:', error);
+    res.status(500).json({ error: 'Mesaj gönderilemedi.' });
   }
 });
 
