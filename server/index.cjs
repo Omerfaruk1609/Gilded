@@ -216,26 +216,45 @@ io.on('connection', (socket) => {
     socket.join(userEmail);
   });
 
-  // Topluluk Çemberleri (Live Circles) Socket Etkinlikleri
-  socket.on('join_circle', (circleId) => {
-    if (!ALLOWED_CIRCLES.has(circleId)) return;
-    socket.join(`circle_${circleId}`);
-    io.to(`circle_${circleId}`).emit('circle_user_joined', {
-      user: userEmail
+// Topluluk Çemberleri (Live Circles) Socket Etkinlikleri
+  socket.on('join_circle', async (circleId) => {
+    if (!circleId) return;
+    const roomName = circleId.startsWith('circle_') ? circleId : `circle_${circleId}`;
+    socket.join(roomName);
+
+    const activeCount = io.sockets.adapter.rooms.get(roomName)?.size || 1;
+    io.to(roomName).emit('circle_presence_update', {
+      circleId,
+      count: activeCount
     });
   });
 
   socket.on('leave_circle', (circleId) => {
-    if (!ALLOWED_CIRCLES.has(circleId)) return;
-    socket.leave(`circle_${circleId}`);
-    io.to(`circle_${circleId}`).emit('circle_user_left', {
-      user: userEmail
+    if (!circleId) return;
+    const roomName = circleId.startsWith('circle_') ? circleId : `circle_${circleId}`;
+    socket.leave(roomName);
+
+    const activeCount = io.sockets.adapter.rooms.get(roomName)?.size || 0;
+    io.to(roomName).emit('circle_presence_update', {
+      circleId,
+      count: activeCount
     });
   });
 
+  socket.on('disconnecting', () => {
+    for (const room of socket.rooms) {
+      if (room.startsWith('circle_')) {
+        const remainingCount = Math.max(0, (io.sockets.adapter.rooms.get(room)?.size || 1) - 1);
+        io.to(room).emit('circle_presence_update', {
+          circleId: room.replace('circle_', ''),
+          count: remainingCount
+        });
+      }
+    }
+  });
+
   socket.on('send_circle_message', async ({ circleId, text }) => {
-    if (!ALLOWED_CIRCLES.has(circleId)) return;
-    if (!text || typeof text !== 'string') return;
+    if (!circleId || !text || typeof text !== 'string') return;
     const cleanText = text.trim();
     if (!cleanText || cleanText.length > 1000) return;
 
@@ -257,7 +276,9 @@ io.on('connection', (socket) => {
       text: cleanText,
       created_at: new Date().toISOString()
     };
-    io.to(`circle_${circleId}`).emit('new_circle_message', msgData);
+    
+    const roomName = circleId.startsWith('circle_') ? circleId : `circle_${circleId}`;
+    io.to(roomName).emit('new_circle_message', msgData);
   });
 
   socket.on('disconnect', () => {
@@ -1110,6 +1131,180 @@ app.put('/api/admin/users/:id/role', requireAuth, requireAdmin, async (req, res)
   }
 });
 
+// Admin: Kullanıcı Sil (Cascade Temizlik & Kendi Kendini Silme Engeli)
+app.delete('/api/admin/users/:id', requireAuth, requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Geçersiz kullanıcı kimliği.' });
+
+  try {
+    const userRes = await db.query('SELECT * FROM users WHERE id = $1', [id]);
+    const targetUser = userRes.rows[0];
+    if (!targetUser) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+
+    if (targetUser.email === req.user.email) {
+      return res.status(400).json({ error: 'Kendi yönetici hesabınızı silemezsiniz.' });
+    }
+
+    const email = targetUser.email;
+    await db.query('DELETE FROM user_follows WHERE follower_id = $1 OR following_id = $1', [email]);
+    await db.query('DELETE FROM follows WHERE user_id = $1', [email]);
+    await db.query('DELETE FROM comment_votes WHERE user_id = $1', [email]);
+    await db.query('DELETE FROM notifications WHERE user_id = $1 OR actor_id = $1', [email]);
+    await db.query('DELETE FROM messages WHERE sender_id = $1 OR receiver_id = $1', [email]);
+    await db.query('DELETE FROM reports WHERE reporter_email = $1 OR reported_user_email = $1', [email]);
+    await db.query('DELETE FROM users WHERE id = $1', [id]);
+
+    res.json({ message: 'Kullanıcı ve ilişkili tüm verileri başarıyla silindi.' });
+  } catch (error) {
+    console.error('Admin kullanıcı silme hatası:', error);
+    res.status(500).json({ error: 'Kullanıcı silinemedi.' });
+  }
+});
+
+// --- ŞİKAYET & RAPORLAMA (REPORTS) SİSTEMİ ---
+
+// Yeni Şikayet Oluştur
+app.post('/api/reports', requireAuth, async (req, res) => {
+  const reporterEmail = req.user.email;
+  const { post_id, comment_id, reported_user_email, reason, details } = req.body;
+
+  if (!reason || typeof reason !== 'string') {
+    return res.status(400).json({ error: 'Şikayet nedeni belirtilmelidir.' });
+  }
+
+  const cleanReason = reason.trim().slice(0, 100);
+  const cleanDetails = details ? String(details).trim().slice(0, 500) : null;
+  const safePostId = post_id ? parseInt(post_id, 10) : null;
+  const safeCommentId = comment_id ? parseInt(comment_id, 10) : null;
+
+  try {
+    const result = await db.query(
+      `INSERT INTO reports (reporter_email, post_id, comment_id, reported_user_email, reason, details)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [reporterEmail, safePostId, safeCommentId, reported_user_email || null, cleanReason, cleanDetails]
+    );
+    res.status(201).json({ message: 'Şikayetiniz yönetici paneline iletildi. Hassasiyetiniz için teşekkür ederiz.', report: result.rows[0] });
+  } catch (error) {
+    console.error('Şikayet oluşturma hatası:', error);
+    res.status(500).json({ error: 'Şikayet iletilemedi.' });
+  }
+});
+
+// Admin: Tüm Şikayetleri Listele
+app.get('/api/admin/reports', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT r.*, 
+             p.content as post_content, 
+             p.author_name as post_author_name,
+             c.content as comment_content,
+             c.author_name as comment_author_name
+      FROM reports r
+      LEFT JOIN posts p ON r.post_id = p.id
+      LEFT JOIN comments c ON r.comment_id = c.id
+      ORDER BY r.created_at DESC
+      LIMIT 100
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Şikayet listeleme hatası:', error);
+    res.status(500).json({ error: 'Şikayetler yüklenemedi.' });
+  }
+});
+
+// Admin: Şikayet Durumu Güncelle (OPEN, RESOLVED, DISMISSED)
+app.put('/api/admin/reports/:id/status', requireAuth, requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const { status } = req.body;
+  if (isNaN(id) || !['RESOLVED', 'DISMISSED', 'OPEN'].includes(status)) {
+    return res.status(400).json({ error: 'Geçersiz şikayet durumu.' });
+  }
+
+  try {
+    await db.query('UPDATE reports SET status = $1 WHERE id = $2', [status, id]);
+    res.json({ message: 'Şikayet durumu güncellendi.' });
+  } catch (error) {
+    console.error('Şikayet güncelleme hatası:', error);
+    res.status(500).json({ error: 'Şikayet güncellenemedi.' });
+  }
+});
+
+// Admin: Şikayet Edilen İçeriği Doğrudan Sil ve Şikayeti Çözüldü Yap
+app.delete('/api/admin/reports/:id/content', requireAuth, requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Geçersiz şikayet kimliği.' });
+
+  try {
+    const reportRes = await db.query('SELECT * FROM reports WHERE id = $1', [id]);
+    const report = reportRes.rows[0];
+    if (!report) return res.status(404).json({ error: 'Şikayet bulunamadı.' });
+
+    if (report.post_id) {
+      await db.query('DELETE FROM posts WHERE id = $1', [report.post_id]);
+    } else if (report.comment_id) {
+      await db.query('DELETE FROM comments WHERE id = $1', [report.comment_id]);
+    }
+
+    await db.query("UPDATE reports SET status = 'RESOLVED' WHERE id = $1", [id]);
+    res.json({ message: 'İçerik kaldırıldı ve şikayet çözüldü olarak işaretlendi.' });
+  } catch (error) {
+    console.error('Şikayetli içerik silme hatası:', error);
+    res.status(500).json({ error: 'İçerik kaldırılamadı.' });
+  }
+});
+
+// --- CANLI ÇEMBERLER (CIRCLES) API ---
+
+// Tüm Çemberleri ve Canlı Aktif Sayılarını Getir
+app.get('/api/circles', async (req, res) => {
+  try {
+    const result = await db.query('SELECT * FROM circles ORDER BY created_at ASC');
+    const circlesWithPresence = result.rows.map(c => {
+      const roomName = c.id.startsWith('circle_') ? c.id : `circle_${c.id}`;
+      const activeCount = io.sockets.adapter.rooms.get(roomName)?.size || 0;
+      return {
+        ...c,
+        active_users: activeCount
+      };
+    });
+    res.json(circlesWithPresence);
+  } catch (error) {
+    console.error('Çember listeleme hatası:', error);
+    res.status(500).json({ error: 'Çemberler yüklenemedi.' });
+  }
+});
+
+// Yeni Çember Oluştur (Yalnızca Bilge ve Adminler)
+app.post('/api/circles', requireAuth, async (req, res) => {
+  const userRole = String(req.user.role || '').toUpperCase();
+  if (userRole !== 'BILGE' && userRole !== 'ADMIN') {
+    return res.status(403).json({ error: 'Yalnızca Bilge veya Yönetici rolündeki ruhlar yeni çember açabilir.' });
+  }
+
+  const { title, subtitle, color } = req.body;
+  if (!title || typeof title !== 'string' || !title.trim()) {
+    return res.status(400).json({ error: 'Çember başlığı zorunludur.' });
+  }
+
+  const cleanTitle = title.trim().slice(0, 100);
+  const cleanSubtitle = subtitle ? String(subtitle).trim().slice(0, 255) : 'Birlikte içsel dinginliğe ve ortak şifaya odaklanma alanı.';
+  const cleanColor = color && /^#[0-9A-Fa-f]{6}$/.test(color) ? color : '#D4AF37';
+  const circleId = 'circle_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+
+  try {
+    const result = await db.query(
+      `INSERT INTO circles (id, title, subtitle, color, created_by)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [circleId, cleanTitle, cleanSubtitle, cleanColor, req.user.email]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Çember oluşturma hatası:', error);
+    res.status(500).json({ error: 'Çember oluşturulamadı.' });
+  }
+});
+
 // --- WISDOM CATEGORIES ---
 
 app.get('/api/wisdom/categories', async (req, res) => {
@@ -1165,9 +1360,20 @@ app.post('/api/wisdom/categories', requireAuth, async (req, res) => {
       const userScoreRes = await db.query('SELECT COALESCE(SUM(score), 0)::int as score FROM comments WHERE author_id = $1', [userId]);
       const userScore = userScoreRes.rows[0].score;
 
-      if (userScore < totalUsers) {
+      const userCommentsCountRes = await db.query('SELECT COUNT(*)::int as count FROM comments WHERE author_id = $1', [userId]);
+      const commentCount = userCommentsCountRes.rows[0].count;
+
+      const userSupportsCountRes = await db.query('SELECT COUNT(*)::int as count FROM supports WHERE user_id = $1', [userId]);
+      const supportCount = userSupportsCountRes.rows[0].count;
+
+      // Akıllı & Kademeli Taban Eşik
+      const minRequiredScore = Math.max(50, Math.floor(totalUsers * 0.5));
+      const minRequiredComments = 5;
+      const minRequiredSupports = 10;
+
+      if (userScore < minRequiredScore || commentCount < minRequiredComments || supportCount < minRequiredSupports) {
         return res.status(403).json({ 
-          error: `Bilgelik kategorisi açabilmek için en az toplam kullanıcı sayısı kadar (${totalUsers}) yorum beğenisi (skoru) toplamanız gerekmektedir. Mevcut skorunuz: ${userScore}` 
+          error: `Bilgelik kategorisi açabilmek için Bilge seviyesine ulaşmalısınız. Gereksinimler: En az ${minRequiredScore} yorum beğenisi (Mevcut: ${userScore}), en az ${minRequiredComments} destekleyici yorum (Mevcut: ${commentCount}), en az ${minRequiredSupports} altın dikiş (Mevcut: ${supportCount}).` 
         });
       }
 

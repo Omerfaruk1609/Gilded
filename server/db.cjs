@@ -40,7 +40,14 @@ async function initDb() {
       await pool.query('ALTER TABLE notifications ALTER COLUMN post_id DROP NOT NULL;');
       await pool.query('ALTER TABLE notifications ADD COLUMN IF NOT EXISTS actor_id VARCHAR(255) DEFAULT NULL;');
       await pool.query('ALTER TABLE notifications ADD COLUMN IF NOT EXISTS message TEXT DEFAULT NULL;');
-      console.log('✅ PostgreSQL tabloları kontrol edildi/oluşturuldu.');
+      await pool.query(`
+        INSERT INTO circles (id, title, subtitle, color) VALUES
+        ('night_talk', 'Gece Dertleşmesi Çemberi 🌙', 'Kırılan parçalarını paylaş, altın dikişlerle ruhunu hafiflet.', '#D4AF37'),
+        ('meditation', 'Sessiz Meditasyon Odası 🧘', 'Derin nefes al, zihnini dinginleştir ve iç huzurunu yakala.', '#4ADE80'),
+        ('stoic_wisdom', 'Stoacı Bilgelik Odası 🏛️', 'Marcus Aurelius ve kadim filozofların izinde içsel direnç sohbeti.', '#fb923c')
+        ON CONFLICT (id) DO NOTHING;
+      `);
+      console.log('✅ PostgreSQL tabloları ve varsayılan çemberler kontrol edildi/oluşturuldu.');
     } else {
       console.warn('⚠️ Şema dosyası (schema.sql) bulunamadı.');
     }

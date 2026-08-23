@@ -96,14 +96,41 @@ CREATE TABLE IF NOT EXISTS messages (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 10. Comment Votes Tablosu
+-- 9. Comment Votes Tablosu
 CREATE TABLE IF NOT EXISTS comment_votes (
     id SERIAL PRIMARY KEY,
     comment_id INTEGER NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
     user_id VARCHAR(255) NOT NULL REFERENCES users(email) ON DELETE CASCADE,
-    vote_type VARCHAR(10) NOT NULL,
-    CONSTRAINT unique_comment_user_vote UNIQUE(comment_id, user_id)
+    vote_type INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(comment_id, user_id)
 );
+
+-- 10. Canlı Çemberler (Circles) Tablosu
+CREATE TABLE IF NOT EXISTS circles (
+    id VARCHAR(100) PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    subtitle TEXT,
+    color VARCHAR(50) DEFAULT '#D4AF37',
+    created_by VARCHAR(255) REFERENCES users(email) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 11. Şikayet ve Raporlama (Reports) Tablosu
+CREATE TABLE IF NOT EXISTS reports (
+    id SERIAL PRIMARY KEY,
+    reporter_email VARCHAR(255) NOT NULL REFERENCES users(email) ON DELETE CASCADE,
+    post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
+    comment_id INTEGER REFERENCES comments(id) ON DELETE CASCADE,
+    reported_user_email VARCHAR(255) REFERENCES users(email) ON DELETE CASCADE,
+    reason VARCHAR(100) NOT NULL,
+    details TEXT,
+    status VARCHAR(50) DEFAULT 'OPEN',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);
+CREATE INDEX IF NOT EXISTS idx_circles_created_at ON circles(created_at);
 
 -- Performans Artırıcı İndeksler (Indexes)
 CREATE INDEX IF NOT EXISTS idx_posts_author_id ON posts(author_id);

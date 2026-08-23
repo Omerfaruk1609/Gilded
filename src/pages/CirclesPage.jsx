@@ -1,12 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
-import { Box, Container, Typography, Paper, Grid, TextField, Button, Chip } from '@mui/material';
-import { Send as SendIcon, Forum as ForumIcon, People as PeopleIcon } from '@mui/icons-material';
+import { 
+  Box, Container, Typography, Paper, Grid, TextField, Button, Chip, 
+  Dialog, DialogTitle, DialogContent, DialogActions, RadioGroup, FormControlLabel, Radio 
+} from '@mui/material';
+import { Send as SendIcon, Forum as ForumIcon, People as PeopleIcon, Add as AddIcon } from '@mui/icons-material';
 import { useSocket } from '../context/SocketContext';
-import { getStoredUser } from '../services/auth';
+import { getStoredUser, isBilgeUser, isAdminUser } from '../services/auth';
+import apiClient from '../services/apiClient';
+import toast from 'react-hot-toast';
 import BreadcrumbsNav from '../components/layout/BreadcrumbsNav';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 
-const CIRCLES = [
+const DEFAULT_CIRCLES = [
   {
     id: 'night_talk',
     title: 'Gece Dertleşmesi Çemberi 🌙',
@@ -28,17 +33,47 @@ const CIRCLES = [
 ];
 
 export default function CirclesPage() {
-  useDocumentTitle('Halkalar (Circles) - Canlı Çemberler', 'Benzer duyguları yaşayan yolcularla anlık dertleşme ve meditasyon çemberleri.')
-  const [selectedCircle, setSelectedCircle] = useState(CIRCLES[0]);
+  useDocumentTitle('Halkalar (Circles) - Canlı Çemberler', 'Benzer duyguları yaşayan yolcularla anlık dertleşme ve meditasyon çemberleri.');
+  const [circles, setCircles] = useState(DEFAULT_CIRCLES);
+  const [selectedCircle, setSelectedCircle] = useState(DEFAULT_CIRCLES[0]);
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [activeUsers, setActiveUsers] = useState(1);
+  const [presenceMap, setPresenceMap] = useState({});
   const messagesEndRef = useRef(null);
 
+  // Yeni Çember Oluşturma Modalı State'leri
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newSubtitle, setNewSubtitle] = useState('');
+  const [newColor, setNewColor] = useState('#D4AF37');
+  const [creating, setCreating] = useState(false);
+
   const socket = useSocket();
-  const currentUser = getStoredUser();
+  const currentUser = getStoredUser() || {};
+  const canCreateCircle = isBilgeUser(currentUser) || isAdminUser(currentUser);
+
+  // Çemberleri Backend'den Çek
+  useEffect(() => {
+    let isCancelled = false;
+    const loadCircles = async () => {
+      try {
+        const res = await apiClient.get('/circles');
+        if (!isCancelled && Array.isArray(res.data) && res.data.length > 0) {
+          setCircles(res.data);
+        }
+      } catch {
+        // Backend yüklenemezse varsayılanlar kullanılır
+      }
+    };
+    loadCircles();
+    return () => { isCancelled = true; };
+  }, []);
 
   const handleSelectCircle = (circle) => {
+    if (socket && selectedCircle) {
+      socket.emit('leave_circle', selectedCircle.id);
+    }
     setSelectedCircle(circle);
     setMessages([]);
   };
@@ -52,23 +87,31 @@ export default function CirclesPage() {
       setMessages((prev) => [...prev, msg]);
     };
 
-    const handleUserJoined = () => {
-      setActiveUsers((prev) => prev + 1);
+    const handlePresenceUpdate = (data) => {
+      if (data && data.circleId) {
+        setPresenceMap((prev) => ({ ...prev, [data.circleId]: data.count }));
+        if (data.circleId === selectedCircle.id || `circle_${selectedCircle.id}` === data.circleId) {
+          setActiveUsers(data.count);
+        }
+      }
     };
 
-    const handleUserLeft = () => {
-      setActiveUsers((prev) => Math.max(1, prev - 1));
+    const handleNewCircle = (newCircle) => {
+      setCircles((prev) => {
+        if (prev.some(c => c.id === newCircle.id)) return prev;
+        return [...prev, newCircle];
+      });
     };
 
     socket.on('new_circle_message', handleNewMessage);
-    socket.on('circle_user_joined', handleUserJoined);
-    socket.on('circle_user_left', handleUserLeft);
+    socket.on('circle_presence_update', handlePresenceUpdate);
+    socket.on('new_circle_created', handleNewCircle);
 
     return () => {
       socket.emit('leave_circle', selectedCircle.id);
       socket.off('new_circle_message', handleNewMessage);
-      socket.off('circle_user_joined', handleUserJoined);
-      socket.off('circle_user_left', handleUserLeft);
+      socket.off('circle_presence_update', handlePresenceUpdate);
+      socket.off('new_circle_created', handleNewCircle);
     };
   }, [socket, selectedCircle]);
 
@@ -82,11 +125,37 @@ export default function CirclesPage() {
 
     socket.emit('send_circle_message', {
       circleId: selectedCircle.id,
-      text: inputMessage.trim(),
-      userName: currentUser?.ad || currentUser?.email?.split('@')[0] || 'Bir Ruh'
+      text: inputMessage.trim()
     });
 
     setInputMessage('');
+  };
+
+  const handleCreateCircle = async (e) => {
+    e.preventDefault();
+    if (!newTitle.trim()) return toast.error('Çember başlığı zorunludur.');
+
+    setCreating(true);
+    try {
+      const res = await apiClient.post('/circles', {
+        title: newTitle.trim(),
+        subtitle: newSubtitle.trim(),
+        color: newColor
+      });
+      toast.success('Yeni çember başarıyla açıldı! ⭕', { icon: '✨' });
+      setCreateOpen(false);
+      setNewTitle('');
+      setNewSubtitle('');
+      setCircles((prev) => {
+        if (prev.some(c => c.id === res.data.id)) return prev;
+        return [...prev, res.data];
+      });
+      setSelectedCircle(res.data);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Çember açılamadı.');
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
@@ -96,17 +165,37 @@ export default function CirclesPage() {
         <Typography variant="h3" sx={{ fontFamily: "'Playfair Display', serif", color: '#D4AF37', fontWeight: 800, mb: 1 }}>
           Topluluk Çemberleri ⭕
         </Typography>
-        <Typography variant="body1" sx={{ color: 'text.secondary', maxWidth: 600, mx: 'auto' }}>
-          Gerçek zamanlı anonim dertleşme odalarına katıl, diğer ruhlarla etkileşime geç ve ortak farkındalık oluştur.
+        <Typography variant="body1" sx={{ color: 'text.secondary', maxWidth: 600, mx: 'auto', mb: 2 }}>
+          Gerçek zamanlı anonim dertleşme ve meditasyon odalarına katıl, benzer yollardan geçen ruhlarla anlık bağ kur.
         </Typography>
+
+        {canCreateCircle && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setCreateOpen(true)}
+            sx={{
+              bgcolor: '#D4AF37',
+              color: '#000',
+              fontWeight: 700,
+              borderRadius: '20px',
+              px: 3,
+              py: 1,
+              '&:hover': { bgcolor: '#F9E076' }
+            }}
+          >
+            Yeni Çember Aç (Bilge Alanı) ⭕
+          </Button>
+        )}
       </Box>
 
       <Grid container spacing={3}>
         {/* Çember Seçim Listesi */}
         <Grid size={{ xs: 12, md: 4 }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {CIRCLES.map((circle) => {
+            {circles.map((circle) => {
               const isSelected = selectedCircle.id === circle.id;
+              const liveCount = presenceMap[circle.id] || circle.active_users || (isSelected ? activeUsers : 0);
               return (
                 <Paper
                   key={circle.id}
@@ -115,19 +204,33 @@ export default function CirclesPage() {
                     p: 2.5,
                     cursor: 'pointer',
                     bgcolor: isSelected ? 'rgba(212, 175, 55, 0.12)' : 'rgba(255, 255, 255, 0.02)',
-                    border: isSelected ? `1.5px solid ${circle.color}` : '1px solid rgba(255, 255, 255, 0.08)',
+                    border: isSelected ? `1.5px solid ${circle.color || '#D4AF37'}` : '1px solid rgba(255, 255, 255, 0.08)',
                     borderRadius: '16px',
                     transition: 'all 0.2s ease',
+                    position: 'relative',
                     '&:hover': {
                       bgcolor: 'rgba(212, 175, 55, 0.08)',
-                      borderColor: circle.color
+                      borderColor: circle.color || '#D4AF37'
                     }
                   }}
                 >
-                  <Typography variant="h6" sx={{ fontWeight: 700, color: circle.color, mb: 0.5 }}>
-                    {circle.title}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: circle.color || '#D4AF37', fontSize: '1.05rem' }}>
+                      {circle.title}
+                    </Typography>
+                    <Chip 
+                      label={`${liveCount} Canlı`}
+                      size="small"
+                      sx={{ 
+                        fontSize: '0.7rem', 
+                        height: '20px', 
+                        bgcolor: liveCount > 0 ? 'rgba(74, 222, 128, 0.15)' : 'rgba(255,255,255,0.05)',
+                        color: liveCount > 0 ? '#4ade80' : '#888',
+                        border: liveCount > 0 ? '1px solid rgba(74, 222, 128, 0.3)' : '1px solid rgba(255,255,255,0.1)'
+                      }}
+                    />
+                  </Box>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', lineHeight: 1.4 }}>
                     {circle.subtitle}
                   </Typography>
                 </Paper>
@@ -162,20 +265,20 @@ export default function CirclesPage() {
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <ForumIcon sx={{ color: selectedCircle.color }} />
+                <ForumIcon sx={{ color: selectedCircle.color || '#D4AF37' }} />
                 <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#fff' }}>
                   {selectedCircle.title}
                 </Typography>
               </Box>
 
               <Chip
-                icon={<PeopleIcon style={{ color: selectedCircle.color, fontSize: '1rem' }} />}
+                icon={<PeopleIcon style={{ color: selectedCircle.color || '#D4AF37', fontSize: '1rem' }} />}
                 label={`${activeUsers} Aktif Ruh`}
                 size="small"
                 sx={{
                   bgcolor: 'rgba(212, 175, 55, 0.08)',
-                  color: selectedCircle.color,
-                  border: `1px solid ${selectedCircle.color}`
+                  color: selectedCircle.color || '#D4AF37',
+                  border: `1px solid ${selectedCircle.color || '#D4AF37'}`
                 }}
               />
             </Box>
@@ -183,9 +286,9 @@ export default function CirclesPage() {
             {/* Mesaj Akışı */}
             <Box sx={{ flex: 1, p: 2.5, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
               {messages.length === 0 ? (
-                <Box sx={{ m: 'auto', textAlign: 'center', opacity: 0.5 }}>
+                <Box sx={{ m: 'auto', textAlign: 'center', opacity: 0.6 }}>
                   <Typography variant="body2" sx={{ fontStyle: 'italic', color: '#aaa' }}>
-                    Bu çember henüz sessiz. İlk dikişi at ve sohbeti başlat...
+                    Bu çember şu an dingin ve sessiz. İlk dikişi at ve sohbeti başlat... ✨
                   </Typography>
                 </Box>
               ) : (
@@ -256,7 +359,7 @@ export default function CirclesPage() {
                 type="submit"
                 variant="contained"
                 sx={{
-                  bgcolor: selectedCircle.color,
+                  bgcolor: selectedCircle.color || '#D4AF37',
                   color: '#000',
                   fontWeight: 700,
                   borderRadius: '12px',
@@ -270,6 +373,97 @@ export default function CirclesPage() {
           </Paper>
         </Grid>
       </Grid>
+
+      {/* Bilge / Admin Çember Oluşturma Modalı */}
+      <Dialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        PaperProps={{
+          sx: {
+            bgcolor: '#141414',
+            color: '#fff',
+            borderRadius: 3,
+            border: '1px solid rgba(212,175,55,0.3)',
+            maxWidth: 480,
+            width: '100%',
+            p: 1
+          }
+        }}
+      >
+        <DialogTitle sx={{ fontFamily: "'Playfair Display', serif", color: '#D4AF37', fontWeight: 700 }}>
+          Yeni Topluluk Çemberi Aç ⭕
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ color: '#94a3b8', mb: 2 }}>
+            Bir Bilge olarak topluluğun dertleşebileceği, meditasyon yapabileceği veya felsefi paylaşımlarda bulunabileceği yeni bir canlı çember açın.
+          </Typography>
+
+          <TextField
+            fullWidth
+            label="Çember Başlığı"
+            placeholder="Örn: İçsel Dinginlik Çemberi 🌿"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            margin="normal"
+            sx={{
+              '& .MuiOutlinedInput-root': { color: '#fff', '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' } },
+              '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.6)' }
+            }}
+          />
+
+          <TextField
+            fullWidth
+            multiline
+            rows={2}
+            label="Çember Açıklaması / Felsefesi"
+            placeholder="Bu çemberde ne amaçla toplanıyoruz?"
+            value={newSubtitle}
+            onChange={(e) => setNewSubtitle(e.target.value)}
+            margin="normal"
+            sx={{
+              '& .MuiOutlinedInput-root': { color: '#fff', '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' } },
+              '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.6)' }
+            }}
+          />
+
+          <Typography variant="subtitle2" sx={{ color: '#D4AF37', mt: 2, mb: 1 }}>
+            Tema Rengi:
+          </Typography>
+          <RadioGroup
+            row
+            value={newColor}
+            onChange={(e) => setNewColor(e.target.value)}
+          >
+            {[
+              { label: 'Altın', value: '#D4AF37' },
+              { label: 'Zümrüt', value: '#4ADE80' },
+              { label: 'Kehribar', value: '#fb923c' },
+              { label: 'Safir', value: '#38bdf8' },
+              { label: 'Ametist', value: '#c084fc' }
+            ].map((c) => (
+              <FormControlLabel
+                key={c.value}
+                value={c.value}
+                control={<Radio sx={{ color: c.value, '&.Mui-checked': { color: c.value } }} />}
+                label={<Typography sx={{ fontSize: '0.85rem', color: c.value }}>{c.label}</Typography>}
+              />
+            ))}
+          </RadioGroup>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setCreateOpen(false)} sx={{ color: '#94a3b8', textTransform: 'none' }}>
+            Vazgeç
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleCreateCircle}
+            disabled={creating}
+            sx={{ bgcolor: '#D4AF37', color: '#000', fontWeight: 700, textTransform: 'none', '&:hover': { bgcolor: '#F9E076' } }}
+          >
+            {creating ? 'Oluşturuluyor...' : 'Çemberi Başlat ✨'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }

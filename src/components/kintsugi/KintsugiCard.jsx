@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Box, TextField, IconButton, Typography, Collapse, Button, Tooltip, useTheme } from '@mui/material';
+import { 
+  Box, TextField, IconButton, Typography, Collapse, Button, Tooltip, useTheme,
+  Dialog, DialogTitle, DialogContent, DialogActions, RadioGroup, FormControlLabel, Radio
+} from '@mui/material';
+import { Flag as FlagIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
@@ -171,6 +175,10 @@ const KintsugiCard = ({ id, content, image_url, audio_url, mood, post_type = 'no
   const [replyingTo, setReplyingTo] = useState(null);
   const [wisdom, setWisdom] = useState(null);
   const [wisdomLoading, setWisdomLoading] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState('Nefret Söylemi veya Küfür');
+  const [reportDetails, setReportDetails] = useState('');
+  const [submittingReport, setSubmittingReport] = useState(false);
 
   const handleGetWisdom = async () => {
     if (wisdomLoading) return;
@@ -188,6 +196,29 @@ const KintsugiCard = ({ id, content, image_url, audio_url, mood, post_type = 'no
   const currentUser = getStoredUser() || {};
   const isAdmin = isAdminUser(currentUser);
   const isAuthor = currentUser.email === author_id;
+
+  const handleReportSubmit = async () => {
+    if (!currentUser.email) {
+      toast.error('Şikayette bulunmak için lütfen giriş yapın.');
+      return;
+    }
+    setSubmittingReport(true);
+    try {
+      await apiClient.post('/reports', {
+        post_id: id,
+        reported_user_email: author_id,
+        reason: reportReason,
+        details: reportDetails
+      });
+      toast.success('Şikayetiniz yöneticilere iletildi. Hassasiyetiniz için teşekkür ederiz.', { icon: '🛡️' });
+      setReportOpen(false);
+      setReportDetails('');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Şikayet iletilemedi.');
+    } finally {
+      setSubmittingReport(false);
+    }
+  };
 
   const handleDeletePost = async () => {
     if (!window.confirm('Bu parçayı sonsuza dek silmek istiyor musun?')) return;
@@ -433,6 +464,18 @@ const KintsugiCard = ({ id, content, image_url, audio_url, mood, post_type = 'no
               </Box>
             )}
             
+            {!isAuthor && (
+              <Tooltip title="Bu içeriği bildir / şikayet et">
+                <IconButton 
+                  size="small" 
+                  onClick={() => setReportOpen(true)} 
+                  sx={{ color: 'rgba(255,255,255,0.25)', '&:hover': { color: '#fb7185' } }}
+                >
+                  <FlagIcon sx={{ fontSize: '1rem' }} />
+                </IconButton>
+              </Tooltip>
+            )}
+
             {(isAuthor || isAdmin) && (
               <IconButton onClick={handleDeletePost} sx={{ color: 'rgba(255,77,77,0.3)', '&:hover': { color: '#ff4d4d' } }}>
                 <span style={{ fontSize: '1.2rem' }}>×</span>
@@ -590,6 +633,85 @@ const KintsugiCard = ({ id, content, image_url, audio_url, mood, post_type = 'no
             ))}
           </Box>
         </Collapse>
+
+        {/* 🚩 Şikayet & Raporlama Modalı */}
+        <Dialog 
+          open={reportOpen} 
+          onClose={() => setReportOpen(false)}
+          PaperProps={{
+            sx: {
+              bgcolor: '#141414',
+              color: '#fff',
+              borderRadius: 3,
+              border: '1px solid rgba(251,113,133,0.3)',
+              maxWidth: 450,
+              width: '100%',
+              p: 1
+            }
+          }}
+        >
+          <DialogTitle sx={{ fontFamily: "'Playfair Display', serif", color: '#fb7185', fontWeight: 700 }}>
+            İçeriği Bildir / Şikayet Et 🚩
+          </DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" sx={{ color: '#94a3b8', mb: 2 }}>
+              Gilded topluluk huzurunu bozan, nefret içeren veya uygunsuz olduğunu düşündüğünüz içerikleri yöneticiye iletebilirsiniz.
+            </Typography>
+
+            <RadioGroup
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              sx={{ mb: 2 }}
+            >
+              {[
+                'Nefret Söylemi veya Küfür',
+                'Taciz veya Tehdit',
+                'Spam veya Yanıltıcı İçerik',
+                'Zararlı / Hassas İçerik',
+                'Telif veya Gizlilik İhlali',
+                'Diğer'
+              ].map((reason) => (
+                <FormControlLabel
+                  key={reason}
+                  value={reason}
+                  control={<Radio sx={{ color: 'rgba(255,255,255,0.4)', '&.Mui-checked': { color: '#fb7185' } }} />}
+                  label={<Typography sx={{ fontSize: '0.9rem', color: '#e2e8f0' }}>{reason}</Typography>}
+                />
+              ))}
+            </RadioGroup>
+
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              placeholder="Ek açıklama (isteğe bağlı)..."
+              value={reportDetails}
+              onChange={(e) => setReportDetails(e.target.value)}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  color: '#fff',
+                  borderRadius: 2,
+                  bgcolor: 'rgba(255,255,255,0.03)',
+                  '& fieldset': { borderColor: 'rgba(255,255,255,0.15)' }
+                }
+              }}
+            />
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={() => setReportOpen(false)} sx={{ color: '#94a3b8', textTransform: 'none' }}>
+              Vazgeç
+            </Button>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={handleReportSubmit}
+              disabled={submittingReport}
+              sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+            >
+              {submittingReport ? 'Gönderiliyor...' : 'Şikayeti İlet'}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </div>
     </div>
   );
