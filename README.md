@@ -192,18 +192,16 @@ npm install
 ```
 
 ### 3. Ortam Değişkenlerini Tanımlayın (`.env`)
-Proje kök dizininde `.env` dosyası oluşturun:
-```env
-PORT=5000
-NODE_ENV=development
-DATABASE_URL=postgresql://postgres:password@localhost:5432/gilded
-JWT_SECRET=kintsugi_super_secret_jwt_key_2026_gilded_space
-CORS_ORIGIN=http://localhost:5173
-ADMIN_EMAIL=admin@gold.com
-ADMIN_PASSWORD=GucluAdminSifresi123!
-# Opsiyonel:
-GEMINI_API_KEY=your_gemini_api_key
+Örnek şablon dosyasını kopyalayın ve kendi güvenli değerlerinizi girin:
+```bash
+cp .env.example .env
 ```
+
+Temel değişkenler:
+- `DATABASE_URL`: PostgreSQL bağlantı adresi (Yerel veya Supabase / Neon)
+- `JWT_SECRET`: Güçlü bir gizli anahtar
+- `ADMIN_EMAIL` & `ADMIN_PASSWORD`: İlk yönetici hesabının giriş bilgileri
+- `GEMINI_API_KEY`: *(Opsiyonel)* Google Gemini AI anahtarı
 
 ### 4. Geliştirme Sunucusunu Başlatın
 ```bash
