@@ -4,10 +4,11 @@
 
 > **"Yaralarınız, ışığın içeri girdiği yerdir. Kırıldığımız yerlerden daha güçlüyüz."** ✨
 
-[![Node.js](https://img.shields.io/badge/Node.js-20.x-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://gilded-kj22.onrender.com)
+[![Database](https://img.shields.io/badge/Database-Neon%20PostgreSQL-00E599?style=for-the-badge&logo=postgresql&logoColor=black)](https://neon.tech)
 [![React](https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![Node.js](https://img.shields.io/badge/Node.js-20.x-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Vite](https://img.shields.io/badge/Vite-8.x-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Socket.io](https://img.shields.io/badge/Socket.io-4.8-010101?style=for-the-badge&logo=socket.io&logoColor=white)](https://socket.io/)
 [![Material UI](https://img.shields.io/badge/Material--UI-6.x-007FFF?style=for-the-badge&logo=mui&logoColor=white)](https://mui.com/)
 [![Security](https://img.shields.io/badge/OWASP-Top%2010%20Hardened-green?style=for-the-badge&logo=shield&logoColor=white)]()
@@ -55,16 +56,25 @@ Platform; gerçek zamanlı canlı çemberler (Live Circles), dış ağa ihtiyaç
   - 🌲 **Orman Rüzgarı:** Bandpass esinti simülasyonu.
 - **4-4-4-4 Kutu Nefesi Koçu:** Zihinsel dengeyi sağlayan görsel sayaçlı nefes egzersizi.
 
-### ⭕ Canlı Topluluk Çemberleri (Live Circles)
+### ⭕ Canlı Topluluk Çemberleri & Gerçek Zamanlı Katılımcı Takibi (Live Presence)
 - **Gerçek Zamanlı Odalar:** `Stoacı Bilgelik Çemberi`, `Gece Dertleşmesi` ve `Sessiz Meditasyon` tematik canlı odaları.
-- **Socket.io Tabanlı İletişim:** Anlık mesajlaşma, canlı katılımcı sayacı ve otomatik moderasyon koruması.
+- **Canlı WebSocket Katılımcı Sayacı:** Odalara giren ve çıkan kullanıcıların socket seviyesinde gerçek zamanlı izlenmesi.
+- **Bilgelere Özel Çember Açma:** Yalnızca `BILGE` rolündeki kullanıcıların topluluk için yeni canlı çember başlatabilmesi.
+
+### 🚩 Topluluk Moderasyonu & Raporlama (Report System)
+- **İçerik Bildirme:** Kullanıcıların uygunsuz veya topluluk huzurunu bozan paylaşımları neden belirterek yöneticiye iletebilmesi.
+- **Admin Moderasyon Masası:** Bildirilen içeriklerin incelenmesi, tek tıkla silinmesi veya çözüme kavuşturulması.
+
+### 🛡️ Yönetim Paneli & E-posta Gizlilik Maskeleme
+- **Kullanıcı Yönetimi:** Rol güncelleme (`USER`, `BILGE`, `ADMIN`) ve GDPR uyumlu cascade kullanıcı silme.
+- **E-posta Gizlilik Kilidi:** Ekran paylaşımı ve yayınlar sırasında veri gizliliğini korumak için tek tıkla açılıp kapanabilen maskeli e-posta gösterimi (`om***@gmail.com`).
 
 ### 💬 Real-Time Mesajlaşma & Bildirim Merkezi
 - **Doğrudan Mesajlaşma (DM):** Kullanıcılar arasında uçtan uca filtrelenmiş, hızlı ve güvenli özel sohbet.
 - **Anlık Socket Bildirimleri:** Gönderiye destek, yorum ve mesaj geldiğinde menüde beliren ve doğrudan sohbete yönlendiren anlık bildirimler.
 
-### 📜 Bilgelik Panosu (Wisdom Board) & Gemini AI
-- **Bilge Rozeti:** Toplulukta beğeni ve fayda sağlayan üyelere otomatik atanan Bilge rolü ve kişisel kategori yönetimi.
+### 📜 Bilgelik Panosu (Wisdom Board) & Kademeli Terfi
+- **Akıllı Bilge Algoritması:** Toplulukta beğeni toplayan ve kaliteli destek yorumları yazan üyelerin otomatik olarak Bilge rolüne terfi etmesi.
 - **Felsefi AI Danışmanı:** Google Gemini destekli, Stoacı ve Doğu felsefesi ilkelerine dayanan yapay zeka rehberi.
 
 ### 🎙️ Sesli Dert Günlüğü (Voice Notes)
