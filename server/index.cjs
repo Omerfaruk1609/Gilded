@@ -70,21 +70,32 @@ const PORT = process.env.PORT || 5000;
 // CORS Yapılandırması
 const allowedOrigins = process.env.CORS_ORIGIN 
   ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()) 
-  : ['http://localhost:5173'];
+  : ['http://localhost:5173', 'http://localhost:5000'];
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('CORS kısıtlaması nedeniyle bu origin isteğine izin verilmiyor.'));
+    // 1. İstek aynı sunucudan (same-origin), postman/curl veya script taginden geliyorsa (origin yoksa)
+    if (!origin) return callback(null, true);
+    
+    // 2. Production ortamında dinamik izin (Render domainleri veya tanımlı originler)
+    if (
+      allowedOrigins.includes(origin) ||
+      origin.includes('onrender.com') ||
+      origin.includes('localhost') ||
+      !process.env.CORS_ORIGIN
+    ) {
+      return callback(null, true);
     }
+    
+    // 3. İzin verilmeyen dış kaynaklara 500 fırlatmak yerine güvenle CORS başlığı basma
+    callback(null, false);
   },
   credentials: true
 };
 
 // HTTP Header Güvenliği (Helmet)
 app.use(helmet({
+  contentSecurityPolicy: false, // Vite SPA derlemesi kendi kaynaklarını yönetir
   crossOriginResourcePolicy: { policy: "cross-origin" },
   xContentTypeOptions: true, // nosniff
   hsts: { maxAge: 31536000, includeSubDomains: true }, // HSTS
@@ -167,7 +178,12 @@ app.use('/api/posts/:id/philosopher-wisdom', aiLimiter);
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || origin.includes('onrender.com') || origin.includes('localhost') || !process.env.CORS_ORIGIN) {
+        return callback(null, true);
+      }
+      callback(null, false);
+    },
     methods: ["GET", "POST"],
     credentials: true
   }
