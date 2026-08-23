@@ -15,7 +15,6 @@ function MessagesPage() {
   const [selectedContact, setSelectedContact] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(false);
   const [contactsTrigger, setContactsTrigger] = useState(0);
   
   const messagesEndRef = useRef(null);
@@ -303,7 +302,7 @@ function MessagesPage() {
                     } 
                   }}
                 />
-                <IconButton type="submit" sx={{ color: '#D4AF37' }} disabled={!newMessage.trim() || loading}>
+                <IconButton type="submit" sx={{ color: '#D4AF37' }} disabled={!newMessage.trim()}>
                   <SendIcon />
                 </IconButton>
               </Box>

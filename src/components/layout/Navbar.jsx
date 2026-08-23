@@ -16,7 +16,7 @@ import {
   Brightness4 as DarkIcon,
   Brightness7 as LightIcon
 } from '@mui/icons-material'
-import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom'
+import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import { useContext, useState, useEffect } from 'react'
 import { ThemeContext } from '../../context/ThemeContext'
 import { clearStoredUser, getStoredUser, isAdminUser, logoutUser } from '../../services/auth'
@@ -28,7 +28,6 @@ import toast from 'react-hot-toast'
 
 function Navbar() {
     const navigate = useNavigate()
-    const location = useLocation()
     const user = getStoredUser()
     const { mode, toggleTheme } = useContext(ThemeContext)
     const [postModalOpen, setPostModalOpen] = useState(false)
@@ -37,11 +36,6 @@ function Navbar() {
     const [searchQuery, setSearchQuery] = useState('')
     const [searchResults, setSearchResults] = useState([])
     const [searchOpen, setSearchOpen] = useState(false)
-
-    // Sayfa değiştiğinde Drawer'ı otomatik kapat
-    useEffect(() => {
-        setDrawerOpen(false);
-    }, [location.pathname]);
 
     useEffect(() => {
         const query = searchQuery.trim();
