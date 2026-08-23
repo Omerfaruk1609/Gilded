@@ -1583,8 +1583,26 @@ app.post('/api/messages', requireAuth, messageLimiter, async (req, res) => {
 // Production ortamında Vite build (dist) çıktılarını statik sun ve SPA yönlendirmelerini index.html'e aktar
 if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '../dist');
-  app.use(express.static(distPath));
+
+  // Statik dosyaları sun (HTML ve SW için no-cache, Asset'ler için immutable cache)
+  app.use(express.static(distPath, {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html') || filePath.endsWith('sw.js')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      } else if (filePath.includes(path.sep + 'assets' + path.sep)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
+    }
+  }));
+
+  // Var olmayan eski /assets veya /api isteklerine HTML dönüp MIME hatası verdirtme!
+  app.use('/assets', (req, res) => {
+    res.status(404).json({ error: 'Asset not found or outdated build' });
+  });
+
+  // Kalan tüm sayfa yönlendirmelerini (SPA) taze index.html ile sun
   app.use((req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }
