@@ -1,0 +1,21 @@
+﻿services:
+  - type: web
+    name: gilded-space
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: ADMIN_EMAIL
+        value: admin@gold.com
+      - key: ADMIN_PASSWORD
+        value: AdminGilded2026!
+      - key: GEMINI_API_KEY
+        sync: false
