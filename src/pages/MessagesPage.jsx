@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Box, Container, Paper, Typography, Avatar, TextField, IconButton, List, ListItem, ListItemAvatar, ListItemText } from '@mui/material';
-import { Send as SendIcon, Chat as ChatIcon } from '@mui/icons-material';
+import { Send as SendIcon, Chat as ChatIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useSearchParams } from 'react-router-dom';
 import { useSocket } from '../context/SocketContext';
 import { getStoredUser } from '../services/auth';
@@ -81,49 +81,58 @@ function MessagesPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Socket.io ile yeni mesaj dinleme
+  // Socket dinleme (Canlı DM mesajları)
   useEffect(() => {
-    if (socket) {
-      const handleNewMessage = (msg) => {
-        if (selectedContact && (msg.sender_id === selectedContact.email || msg.receiver_id === selectedContact.email)) {
-          setMessages(prev => [...prev, msg]);
-        } else {
-          toast.success(`${msg.sender_name || 'Bir Ruh'} size yeni bir mesaj gönderdi ✨`, {
-            duration: 3000,
-            position: 'top-right'
-          });
-          setContactsTrigger(prev => prev + 1);
-        }
-      };
+    if (!socket) return;
 
-      socket.on('new_message', handleNewMessage);
-      return () => socket.off('new_message', handleNewMessage);
-    }
+    const handleReceiveMessage = (data) => {
+      // Eğer açık olan sohbetle ilgili bir mesajsa listeye ekle
+      if (
+        selectedContact && 
+        (data.sender_id === selectedContact.email || data.receiver_id === selectedContact.email)
+      ) {
+        setMessages((prev) => [...prev, data]);
+      } else {
+        // Yeni mesaj bildirimi
+        toast(`Yeni mesaj: ${data.sender_name || 'Biri'}`, { icon: '💬' });
+        setContactsTrigger((prev) => prev + 1);
+      }
+    };
+
+    socket.on('receive_private_message', handleReceiveMessage);
+
+    return () => {
+      socket.off('receive_private_message', handleReceiveMessage);
+    };
   }, [socket, selectedContact]);
 
-  // Mesaj Gönder
-  const handleSendMessage = async (e) => {
+  const handleSendMessage = (e) => {
     if (e) e.preventDefault();
-    if (!newMessage.trim() || !selectedContact || loading) return;
+    if (!newMessage.trim() || !selectedContact || !socket) return;
 
-    setLoading(true);
-    try {
-      const res = await apiClient.post('/messages', {
-        receiverEmail: selectedContact.email,
-        content: newMessage.trim()
-      });
+    const messageData = {
+      receiverId: selectedContact.email,
+      content: newMessage.trim()
+    };
 
-      setMessages(prev => [...prev, res.data]);
-      setNewMessage('');
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Mesaj gönderilemedi');
-    } finally {
-      setLoading(false);
-    }
+    // Socket ile anlık gönder
+    socket.emit('send_private_message', messageData);
+
+    // Kendi ekranımızda hemen gösterelim
+    const optimisticMessage = {
+      id: Date.now(),
+      sender_id: currentUser.email,
+      receiver_id: selectedContact.email,
+      content: newMessage.trim(),
+      created_at: new Date().toISOString()
+    };
+    setMessages((prev) => [...prev, optimisticMessage]);
+
+    setNewMessage('');
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4, height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
+    <Container maxWidth="lg" sx={{ py: { xs: 1.5, sm: 3 }, px: { xs: 1, sm: 2 }, height: { xs: 'calc(100vh - 75px)', sm: 'calc(100vh - 100px)' }, display: 'flex', flexDirection: 'column' }}>
       <Paper 
         elevation={0}
         sx={{ 
@@ -131,15 +140,22 @@ function MessagesPage() {
           flex: 1, 
           bgcolor: 'rgba(26, 26, 26, 0.4)', 
           backdropFilter: 'blur(10px)',
-          borderRadius: '16px',
+          borderRadius: { xs: '12px', sm: '16px' },
           border: '1px solid rgba(212, 175, 55, 0.15)',
           overflow: 'hidden'
         }}
       >
         {/* SOL PANEL: KİŞİLER LİSTESİ */}
-        <Box sx={{ width: { xs: '100%', sm: 320 }, borderRight: '1px solid rgba(212, 175, 55, 0.15)', display: 'flex', flexDirection: 'column' }}>
+        <Box 
+          sx={{ 
+            width: { xs: '100%', sm: 300, md: 340 }, 
+            borderRight: { sm: '1px solid rgba(212, 175, 55, 0.15)' }, 
+            display: { xs: selectedContact ? 'none' : 'flex', sm: 'flex' }, 
+            flexDirection: 'column' 
+          }}
+        >
           <Box sx={{ p: 2, borderBottom: '1px solid rgba(212, 175, 55, 0.15)' }}>
-            <Typography variant="h6" sx={{ color: '#D4AF37', fontWeight: 700 }}>
+            <Typography variant="h6" sx={{ color: '#D4AF37', fontWeight: 700, fontSize: '1.1rem' }}>
               Ruh Bağlantıları
             </Typography>
             <Typography variant="caption" sx={{ color: '#666' }}>
@@ -188,16 +204,31 @@ function MessagesPage() {
         </Box>
 
         {/* SAĞ PANEL: SOHBET EKRANI */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', bgcolor: 'rgba(10, 10, 10, 0.2)' }}>
+        <Box 
+          sx={{ 
+            flex: 1, 
+            display: { xs: selectedContact ? 'flex' : 'none', sm: 'flex' }, 
+            flexDirection: 'column', 
+            bgcolor: 'rgba(10, 10, 10, 0.2)' 
+          }}
+        >
           {selectedContact ? (
             <>
               {/* Sohbet Başlığı */}
-              <Box sx={{ p: 2, borderBottom: '1px solid rgba(212, 175, 55, 0.15)', display: 'flex', alignItems: 'center', gap: 2, bgcolor: 'rgba(0,0,0,0.2)' }}>
+              <Box sx={{ p: 2, borderBottom: '1px solid rgba(212, 175, 55, 0.15)', display: 'flex', alignItems: 'center', gap: 1.5, bgcolor: 'rgba(0,0,0,0.2)' }}>
+                {/* Mobilde Geri Butonu */}
+                <IconButton 
+                  onClick={() => setSelectedContact(null)} 
+                  sx={{ display: { xs: 'flex', sm: 'none' }, color: '#D4AF37', p: 0.5 }}
+                >
+                  <ArrowBackIcon />
+                </IconButton>
+
                 <Avatar sx={{ bgcolor: selectedContact.role === 'ADMIN' ? '#ffd700' : selectedContact.role === 'BILGE' ? '#fb923c' : '#94a3b8', color: '#000', fontWeight: 'bold' }}>
                   {selectedContact.ad?.charAt(0).toUpperCase()}
                 </Avatar>
                 <Box>
-                  <Typography sx={{ color: '#fff', fontWeight: 700 }}>{selectedContact.ad}</Typography>
+                  <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '0.95rem' }}>{selectedContact.ad}</Typography>
                   <Typography variant="caption" sx={{ color: '#D4AF37' }}>
                     {selectedContact.role === 'ADMIN' ? 'Yönetici' : selectedContact.role === 'BILGE' ? 'Bilge' : 'Ruh Yoldaşı'}
                   </Typography>
@@ -205,7 +236,7 @@ function MessagesPage() {
               </Box>
 
               {/* Mesaj Listesi */}
-              <Box sx={{ flex: 1, overflowY: 'auto', p: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ flex: 1, overflowY: 'auto', p: { xs: 1.5, sm: 3 }, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                 {messages.map((msg) => {
                   const isSentByMe = msg.sender_id === currentUser.email;
                   return (

@@ -159,13 +159,13 @@ export default function CirclesPage() {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 }, px: { xs: 1.5, sm: 3 } }}>
       <BreadcrumbsNav items={[{ label: 'Topluluk Çemberleri' }]} />
-      <Box sx={{ mb: 4, textAlign: 'center' }}>
-        <Typography variant="h3" sx={{ fontFamily: "'Playfair Display', serif", color: '#D4AF37', fontWeight: 800, mb: 1 }}>
+      <Box sx={{ mb: { xs: 2.5, md: 4 }, textAlign: 'center' }}>
+        <Typography variant="h3" sx={{ fontFamily: "'Playfair Display', serif", color: '#D4AF37', fontWeight: 800, mb: 1, fontSize: { xs: '1.75rem', sm: '2.3rem', md: '3rem' } }}>
           Topluluk Çemberleri ⭕
         </Typography>
-        <Typography variant="body1" sx={{ color: 'text.secondary', maxWidth: 600, mx: 'auto', mb: 2 }}>
+        <Typography variant="body1" sx={{ color: 'text.secondary', maxWidth: 600, mx: 'auto', mb: 2, fontSize: { xs: '0.9rem', md: '1rem' } }}>
           Gerçek zamanlı anonim dertleşme ve meditasyon odalarına katıl, benzer yollardan geçen ruhlarla anlık bağ kur.
         </Typography>
 
@@ -201,7 +201,7 @@ export default function CirclesPage() {
                   key={circle.id}
                   onClick={() => handleSelectCircle(circle)}
                   sx={{
-                    p: 2.5,
+                    p: { xs: 2, md: 2.5 },
                     cursor: 'pointer',
                     bgcolor: isSelected ? 'rgba(212, 175, 55, 0.12)' : 'rgba(255, 255, 255, 0.02)',
                     border: isSelected ? `1.5px solid ${circle.color || '#D4AF37'}` : '1px solid rgba(255, 255, 255, 0.08)',
@@ -215,7 +215,7 @@ export default function CirclesPage() {
                   }}
                 >
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 700, color: circle.color || '#D4AF37', fontSize: '1.05rem' }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: circle.color || '#D4AF37', fontSize: { xs: '0.95rem', md: '1.05rem' } }}>
                       {circle.title}
                     </Typography>
                     <Chip 
@@ -245,7 +245,7 @@ export default function CirclesPage() {
             sx={{
               display: 'flex',
               flexDirection: 'column',
-              height: '520px',
+              height: { xs: '440px', md: '520px' },
               bgcolor: 'rgba(15, 15, 15, 0.95)',
               borderRadius: '20px',
               border: '1px solid rgba(212, 175, 55, 0.2)',

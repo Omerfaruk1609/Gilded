@@ -514,9 +514,10 @@ const KintsugiCard = ({ id, content, image_url, audio_url, mood, post_type = 'no
           </Box>
         )}
         
-        <Box sx={{ mt: 4, display: 'flex', gap: 2, alignItems: 'center' }}>
+        <Box sx={{ mt: { xs: 2.5, sm: 4 }, display: 'flex', gap: { xs: 1, sm: 2 }, alignItems: 'center', flexWrap: 'wrap' }}>
           {!isWisdom && (
             <Button 
+              size="small"
               onClick={handleStitch}
               disabled={hasSupported || loading}
               sx={{ 
@@ -524,7 +525,8 @@ const KintsugiCard = ({ id, content, image_url, audio_url, mood, post_type = 'no
                 border: '1px solid #D4AF37',
                 color: '#D4AF37',
                 borderRadius: '20px',
-                px: 3,
+                px: { xs: 1.5, sm: 2.5 },
+                fontSize: { xs: '0.75rem', sm: '0.85rem' },
                 '&:hover': { bgcolor: 'rgba(212, 175, 55, 0.1)' },
                 '&.Mui-disabled': { color: 'rgba(212, 175, 55, 0.5)', borderColor: 'rgba(212, 175, 55, 0.2)' }
               }}
@@ -534,20 +536,22 @@ const KintsugiCard = ({ id, content, image_url, audio_url, mood, post_type = 'no
           )}
 
           <Button 
+            size="small"
             onClick={() => {
               setReplyingTo(replyingTo === 'root' ? null : 'root');
               setShowComments(true);
             }}
-            sx={{ color: '#888', textTransform: 'none' }}
+            sx={{ color: '#888', textTransform: 'none', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}
           >
             Yorum At
           </Button>
 
           {!isWisdom && (
             <Button 
+              size="small"
               onClick={handleGetWisdom}
               disabled={wisdomLoading}
-              sx={{ color: '#D4AF37', textTransform: 'none', ml: 1 }}
+              sx={{ color: '#D4AF37', textTransform: 'none', fontSize: { xs: '0.8rem', sm: '0.875rem' } }}
             >
               {wisdomLoading ? 'Düşünülüyor...' : 'Bilgeye Danış 🏺'}
             </Button>
@@ -555,8 +559,9 @@ const KintsugiCard = ({ id, content, image_url, audio_url, mood, post_type = 'no
 
           {comments.length > 0 && (
             <Button 
+              size="small"
               onClick={() => setShowComments(!showComments)}
-              sx={{ color: '#666', fontSize: '0.75rem', ml: 'auto' }}
+              sx={{ color: '#666', fontSize: { xs: '0.7rem', sm: '0.75rem' }, ml: { xs: 0, sm: 'auto' } }}
             >
               {showComments ? 'Gizle' : `${comments.length} Destek Mesajı`}
             </Button>

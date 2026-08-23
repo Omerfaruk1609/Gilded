@@ -41,9 +41,9 @@ function HomePage() {
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: 6 }}>
+    <Container maxWidth="md" sx={{ py: { xs: 3, md: 6 }, px: { xs: 1.5, sm: 3 } }}>
       {/* Top CTA Hero Section */}
-      <Box sx={{ mb: 5, textAlign: 'center' }}>
+      <Box sx={{ mb: { xs: 3, md: 5 }, textAlign: 'center' }}>
         <Typography 
           variant="h2" 
           sx={{ 
@@ -53,12 +53,12 @@ function HomePage() {
             background: 'linear-gradient(135deg, #FFF6D6 0%, #D4AF37 50%, #AA7C11 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
-            fontSize: { xs: '2.4rem', md: '3.5rem' }
+            fontSize: { xs: '1.85rem', sm: '2.4rem', md: '3.2rem' }
           }}
         >
           Kırıklardan Doğan Güç
         </Typography>
-        <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.8)', fontWeight: 400, maxWidth: 650, mx: 'auto', mb: 3 }}>
+        <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.8)', fontWeight: 400, maxWidth: 650, mx: 'auto', mb: 3, fontSize: { xs: '0.95rem', md: '1.15rem' } }}>
           Başarısızlıklarını ve kırılma anlarını gizleme. Topluluğun şefkatiyle onları parıldayan birer altına dönüştür.
         </Typography>
         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>

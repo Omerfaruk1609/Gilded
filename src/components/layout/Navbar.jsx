@@ -1,6 +1,22 @@
-import { AppBar, Box, Button, Toolbar, Typography, Avatar, IconButton, TextField, Paper, List, ListItem } from '@mui/material'
-import { Search as SearchIcon } from '@mui/icons-material'
-import { Link as RouterLink, useNavigate } from 'react-router-dom'
+import { 
+  AppBar, Box, Button, Toolbar, Typography, Avatar, IconButton, TextField, Paper, 
+  List, ListItem, ListItemButton, ListItemIcon, ListItemText, Drawer, Divider 
+} from '@mui/material'
+import { 
+  Search as SearchIcon, 
+  Menu as MenuIcon, 
+  Close as CloseIcon,
+  AutoAwesome as AutoAwesomeIcon,
+  SelfImprovement as MeditationIcon,
+  Forum as ForumIcon,
+  Chat as ChatIcon,
+  Person as PersonIcon,
+  Shield as ShieldIcon,
+  Logout as LogoutIcon,
+  Brightness4 as DarkIcon,
+  Brightness7 as LightIcon
+} from '@mui/icons-material'
+import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom'
 import { useContext, useState, useEffect } from 'react'
 import { ThemeContext } from '../../context/ThemeContext'
 import { clearStoredUser, getStoredUser, isAdminUser, logoutUser } from '../../services/auth'
@@ -12,13 +28,20 @@ import toast from 'react-hot-toast'
 
 function Navbar() {
     const navigate = useNavigate()
+    const location = useLocation()
     const user = getStoredUser()
     const { mode, toggleTheme } = useContext(ThemeContext)
     const [postModalOpen, setPostModalOpen] = useState(false)
     const [meditationOpen, setMeditationOpen] = useState(false)
+    const [drawerOpen, setDrawerOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const [searchResults, setSearchResults] = useState([])
     const [searchOpen, setSearchOpen] = useState(false)
+
+    // Sayfa değiştiğinde Drawer'ı otomatik kapat
+    useEffect(() => {
+        setDrawerOpen(false);
+    }, [location.pathname]);
 
     useEffect(() => {
         const query = searchQuery.trim();
@@ -67,16 +90,19 @@ function Navbar() {
 
     return (
         <AppBar
-            position="static"
+            position="sticky"
             sx={{
-                bgcolor: '#0a0a0a', // Daha derin siyah
+                bgcolor: '#0a0a0a',
                 boxShadow: 'none',
-                borderBottom: '1px solid rgba(212, 175, 55, 0.15)' // Altın tonlu çok ince bir sınır
+                borderBottom: '1px solid rgba(212, 175, 55, 0.15)',
+                top: 0,
+                zIndex: 1100,
+                width: '100%'
             }}
         >
-            <Toolbar variant="dense" sx={{ gap: 1, px: { xs: 1, md: 2 }, minHeight: '48px' }}>
+            <Toolbar sx={{ gap: 1, px: { xs: 1.5, sm: 2, md: 3 }, minHeight: { xs: '54px', sm: '60px' }, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
 
-                {/* LOGO VE İSİM ALANI - Kintsugi Space Teması */}
+                {/* LOGO ALANI */}
                 <Box
                     component={RouterLink}
                     to="/"
@@ -84,8 +110,7 @@ function Navbar() {
                         display: 'flex',
                         alignItems: 'center',
                         gap: 1,
-                        textDecoration: 'none',
-                        mr: 'auto'
+                        textDecoration: 'none'
                     }}
                 >
                     <Box
@@ -93,17 +118,17 @@ function Navbar() {
                         src="/Gildedlogo.png"
                         alt="Gilded"
                         sx={{
-                            height: 45,
+                            height: { xs: 36, sm: 42 },
                             width: 'auto'
                         }}
                     />
                 </Box>
 
-                {/* MENÜ BUTONLARI */}
+                {/* MASAÜSTÜ MENÜ (md ve üzeri) */}
                 {user ? (
-                    <>
-                        {/* KULLANICI ARAMA (USER SEARCH BAR) */}
-                        <Box sx={{ position: 'relative', mr: 1, display: { xs: 'none', sm: 'block' } }}>
+                    <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 1 }}>
+                        {/* KULLANICI ARAMA */}
+                        <Box sx={{ position: 'relative', mr: 1 }}>
                             <TextField
                                 size="small"
                                 placeholder="Kullanıcı Ara..."
@@ -116,13 +141,13 @@ function Navbar() {
                                     }
                                 }}
                                 sx={{
-                                    width: { sm: 160, md: 220 },
+                                    width: { md: 170, lg: 220 },
                                     '& .MuiOutlinedInput-root': {
                                         bgcolor: 'rgba(255,255,255,0.03)',
                                         color: '#fff',
                                         borderRadius: '12px',
                                         fontSize: '0.85rem',
-                                        height: '32px',
+                                        height: '34px',
                                         '& fieldset': { borderColor: 'rgba(212, 175, 55, 0.2)' },
                                         '&:hover fieldset': { borderColor: '#D4AF37' },
                                         '&.Mui-focused fieldset': { borderColor: '#D4AF37' }
@@ -130,12 +155,11 @@ function Navbar() {
                                 }}
                             />
 
-                            {/* Arama Açılır Menüsü */}
                             {searchOpen && (
                                 <Paper
                                     sx={{
                                         position: 'absolute',
-                                        top: '38px',
+                                        top: '40px',
                                         left: 0,
                                         right: 0,
                                         minWidth: 260,
@@ -210,16 +234,6 @@ function Navbar() {
                             )}
                         </Box>
 
-                        {isAdminUser(user) && (
-                            <Button
-                                component={RouterLink}
-                                to="/admin"
-                                sx={{ color: '#FCD34D', fontWeight: 700, opacity: 0.8, '&:hover': { opacity: 1 } }}
-                            >
-                                Admin
-                            </Button>
-                        )}
-
                         {/* ONAR BUTONU */}
                         <Button
                             onClick={() => setPostModalOpen(true)}
@@ -248,169 +262,211 @@ function Navbar() {
                             Onar ✨
                         </Button>
 
-                        <Button
-                            component={RouterLink}
-                            to="/wisdom"
-                            sx={{
-                                color: '#D4AF37',
-                                fontWeight: 700,
-                                fontSize: '0.95rem',
-                                letterSpacing: '0.5px',
-                                '&:hover': {
-                                    color: '#F9E076',
-                                    backgroundColor: 'transparent'
-                                }
-                            }}
-                        >
-                            Bilgelik Panosu
+                        <Button component={RouterLink} to="/wisdom" sx={{ color: '#D4AF37', fontWeight: 600, fontSize: '0.9rem', textTransform: 'none', '&:hover': { color: '#F9E076', bgcolor: 'transparent' } }}>
+                            Bilgelik
                         </Button>
 
-                        <Button
-                            component={RouterLink}
-                            to="/circles"
-                            sx={{
-                                color: '#94a3b8',
-                                fontWeight: 500,
-                                fontSize: '0.95rem',
-                                letterSpacing: '0.5px',
-                                '&:hover': {
-                                    color: '#D4AF37',
-                                    backgroundColor: 'transparent'
-                                }
-                            }}
-                        >
+                        <Button component={RouterLink} to="/circles" sx={{ color: '#94a3b8', fontWeight: 500, fontSize: '0.9rem', textTransform: 'none', '&:hover': { color: '#D4AF37', bgcolor: 'transparent' } }}>
                             Çemberler ⭕
                         </Button>
 
-                        <Button
-                            onClick={() => setMeditationOpen(true)}
-                            sx={{
-                                color: '#94a3b8',
-                                fontWeight: 500,
-                                fontSize: '0.95rem',
-                                letterSpacing: '0.5px',
-                                textTransform: 'none',
-                                '&:hover': {
-                                    color: '#4ADE80',
-                                    backgroundColor: 'transparent'
-                                }
-                            }}
-                        >
+                        <Button onClick={() => setMeditationOpen(true)} sx={{ color: '#94a3b8', fontWeight: 500, fontSize: '0.9rem', textTransform: 'none', '&:hover': { color: '#4ADE80', bgcolor: 'transparent' } }}>
                             Meditasyon 🧘
                         </Button>
 
-                        <Button
-                            component={RouterLink}
-                            to="/messages"
-                            sx={{
-                                color: '#94a3b8',
-                                fontWeight: 500,
-                                fontSize: '0.95rem',
-                                letterSpacing: '0.5px',
-                                '&:hover': {
-                                    color: '#D4AF37',
-                                    backgroundColor: 'transparent'
-                                }
-                            }}
-                        >
+                        <Button component={RouterLink} to="/messages" sx={{ color: '#94a3b8', fontWeight: 500, fontSize: '0.9rem', textTransform: 'none', '&:hover': { color: '#D4AF37', bgcolor: 'transparent' } }}>
                             Mesajlar
                         </Button>
 
-                        {/* PROFİL KISMI */}
-                        <Box
-                            component={RouterLink}
-                            to="/profile"
-                            sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 1.2,
-                                px: 2,
-                                ml: 1,
-                                borderLeft: '1px solid rgba(255,255,255,0.1)',
-                                textDecoration: 'none',
-                                cursor: 'pointer',
-                                '&:hover': { opacity: 0.8 }
-                            }}
-                        >
-                            <Avatar
-                                sx={{
-                                    width: 24,
-                                    height: 24,
-                                    bgcolor: '#fb923c', // Pastel turuncu
-                                    fontSize: '0.75rem',
-                                    fontWeight: 'bold',
-                                    color: '#0f172a', // Arka planla aynı lacivert (kontrast için)
-                                    opacity: 0.9
-                                }}
-                            >
+                        {isAdminUser(user) && (
+                            <Button component={RouterLink} to="/admin" sx={{ color: '#FCD34D', fontWeight: 700, fontSize: '0.85rem', textTransform: 'none', opacity: 0.9, '&:hover': { opacity: 1 } }}>
+                                Admin
+                            </Button>
+                        )}
+
+                        {/* PROFİL */}
+                        <Box component={RouterLink} to="/profile" sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, borderLeft: '1px solid rgba(255,255,255,0.1)', textDecoration: 'none', cursor: 'pointer', '&:hover': { opacity: 0.8 } }}>
+                            <Avatar sx={{ width: 26, height: 26, bgcolor: '#fb923c', fontSize: '0.75rem', fontWeight: 'bold', color: '#0f172a' }}>
                                 {user.ad?.charAt(0).toUpperCase()}
                             </Avatar>
-                            <Typography sx={{
-                                color: '#94a3b8',
-                                fontWeight: 600,
-                                fontSize: '0.9rem',
-                                display: { xs: 'none', md: 'block' }
-                            }}>
-                                {user.ad}
+                            <Typography sx={{ color: '#94a3b8', fontWeight: 600, fontSize: '0.85rem' }}>
+                                {user.ad?.split(' ')[0]}
                             </Typography>
                         </Box>
 
                         <NotificationsMenu />
 
-                        <IconButton onClick={toggleTheme} sx={{ ml: 1, fontSize: '1rem' }}>
-                            {mode === 'dark' ? '☀️' : '🌙'}
+                        <IconButton onClick={toggleTheme} size="small" sx={{ ml: 0.5, color: '#D4AF37' }}>
+                            {mode === 'dark' ? <LightIcon fontSize="small" /> : <DarkIcon fontSize="small" />}
                         </IconButton>
 
-                        <Button
-                            variant="outlined"
-                            onClick={handleLogout}
-                            size="small"
-                            sx={{
-                                color: '#ef4444',
-                                borderColor: 'rgba(239, 68, 68, 0.3)',
-                                fontWeight: 'bold',
-                                ml: 1,
-                                fontSize: '0.75rem',
-                                '&:hover': {
-                                    borderColor: '#ef4444',
-                                    bgcolor: 'rgba(239, 68, 68, 0.05)'
-                                }
-                            }}
-                        >
+                        <Button variant="outlined" onClick={handleLogout} size="small" sx={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)', fontWeight: 'bold', ml: 1, fontSize: '0.75rem', textTransform: 'none', '&:hover': { borderColor: '#ef4444', bgcolor: 'rgba(239, 68, 68, 0.05)' } }}>
                             Çıkış
                         </Button>
-                    </>
+                    </Box>
                 ) : (
-                    <>
-                        <Button
-                            component={RouterLink}
-                            to="/login"
-                            sx={{ color: '#94a3b8', fontWeight: 600, fontSize: '0.8rem', '&:hover': { color: '#e2e8f0' } }}
-                        >
+                    <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 1.5 }}>
+                        <Button component={RouterLink} to="/login" sx={{ color: '#94a3b8', fontWeight: 600, fontSize: '0.85rem', '&:hover': { color: '#e2e8f0' } }}>
                             Giriş Yap
                         </Button>
-                        <Button
-                            component={RouterLink}
-                            to="/register"
-                            variant="contained"
-                            size="small"
-                            sx={{
-                                bgcolor: '#D4AF37',
-                                color: '#000',
-                                fontWeight: 700,
-                                borderRadius: '6px',
-                                px: 2,
-                                fontSize: '0.8rem',
-                                textTransform: 'none',
-                                opacity: 0.9,
-                                '&:hover': { bgcolor: '#F9E076', opacity: 1 }
-                            }}
-                        >
+                        <Button component={RouterLink} to="/register" variant="contained" size="small" sx={{ bgcolor: '#D4AF37', color: '#000', fontWeight: 700, borderRadius: '8px', px: 2, fontSize: '0.85rem', textTransform: 'none', '&:hover': { bgcolor: '#F9E076' } }}>
                             Kayıt Ol
                         </Button>
-                    </>
+                    </Box>
                 )}
+
+                {/* MOBİL SAĞ MENÜ BUTONLARI (xs & sm) */}
+                <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', gap: 1 }}>
+                    {user ? (
+                        <>
+                            <Button
+                                onClick={() => setPostModalOpen(true)}
+                                variant="contained"
+                                size="small"
+                                sx={{
+                                    bgcolor: '#D4AF37',
+                                    color: '#000',
+                                    fontWeight: 700,
+                                    fontSize: '0.75rem',
+                                    py: 0.3,
+                                    px: 1.2,
+                                    borderRadius: '12px',
+                                    textTransform: 'none'
+                                }}
+                            >
+                                Onar ✨
+                            </Button>
+                            <NotificationsMenu />
+                            <IconButton onClick={() => setDrawerOpen(true)} sx={{ color: '#D4AF37', p: 0.8 }}>
+                                <MenuIcon />
+                            </IconButton>
+                        </>
+                    ) : (
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button component={RouterLink} to="/login" size="small" sx={{ color: '#94a3b8', fontSize: '0.8rem', textTransform: 'none' }}>
+                                Giriş
+                            </Button>
+                            <Button component={RouterLink} to="/register" size="small" variant="contained" sx={{ bgcolor: '#D4AF37', color: '#000', fontWeight: 700, fontSize: '0.75rem', textTransform: 'none' }}>
+                                Kayıt Ol
+                            </Button>
+                        </Box>
+                    )}
+                </Box>
             </Toolbar>
+
+            {/* MOBİL YAN AÇILIR ÇEKMECE (DRAWER) */}
+            <Drawer
+                anchor="right"
+                open={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
+                PaperProps={{
+                    sx: {
+                        width: 280,
+                        bgcolor: '#0f0f0f',
+                        color: '#fff',
+                        borderLeft: '1px solid rgba(212, 175, 55, 0.25)',
+                        p: 2,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between'
+                    }
+                }}
+            >
+                <Box>
+                    {/* Çekmece Üst Başlık & Kapat Butonu */}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+                            <Avatar sx={{ width: 36, height: 36, bgcolor: '#fb923c', color: '#000', fontWeight: 'bold' }}>
+                                {user?.ad?.charAt(0).toUpperCase()}
+                            </Avatar>
+                            <Box>
+                                <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#fff' }}>
+                                    {user?.ad}
+                                </Typography>
+                                <Typography sx={{ fontSize: '0.7rem', color: '#888' }}>
+                                    {user?.role === 'ADMIN' ? 'Yönetici' : user?.role === 'BILGE' ? 'Bilge' : 'Topluluk Üyesi'}
+                                </Typography>
+                            </Box>
+                        </Box>
+                        <IconButton onClick={() => setDrawerOpen(false)} sx={{ color: '#888' }}>
+                            <CloseIcon />
+                        </IconButton>
+                    </Box>
+
+                    <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
+
+                    {/* Menü Linkleri */}
+                    <List sx={{ p: 0 }}>
+                        <ListItem disablePadding sx={{ mb: 1 }}>
+                            <ListItemButton component={RouterLink} to="/wisdom" sx={{ borderRadius: '12px' }}>
+                                <ListItemIcon sx={{ color: '#D4AF37', minWidth: 38 }}><AutoAwesomeIcon /></ListItemIcon>
+                                <ListItemText primary="Bilgelik Panosu" primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 600 }} />
+                            </ListItemButton>
+                        </ListItem>
+
+                        <ListItem disablePadding sx={{ mb: 1 }}>
+                            <ListItemButton component={RouterLink} to="/circles" sx={{ borderRadius: '12px' }}>
+                                <ListItemIcon sx={{ color: '#D4AF37', minWidth: 38 }}><ForumIcon /></ListItemIcon>
+                                <ListItemText primary="Canlı Çemberler ⭕" primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 600 }} />
+                            </ListItemButton>
+                        </ListItem>
+
+                        <ListItem disablePadding sx={{ mb: 1 }}>
+                            <ListItemButton onClick={() => { setMeditationOpen(true); setDrawerOpen(false); }} sx={{ borderRadius: '12px' }}>
+                                <ListItemIcon sx={{ color: '#4ADE80', minWidth: 38 }}><MeditationIcon /></ListItemIcon>
+                                <ListItemText primary="Meditasyon & Nefes 🧘" primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 600 }} />
+                            </ListItemButton>
+                        </ListItem>
+
+                        <ListItem disablePadding sx={{ mb: 1 }}>
+                            <ListItemButton component={RouterLink} to="/messages" sx={{ borderRadius: '12px' }}>
+                                <ListItemIcon sx={{ color: '#D4AF37', minWidth: 38 }}><ChatIcon /></ListItemIcon>
+                                <ListItemText primary="Mesajlar" primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 600 }} />
+                            </ListItemButton>
+                        </ListItem>
+
+                        <ListItem disablePadding sx={{ mb: 1 }}>
+                            <ListItemButton component={RouterLink} to="/profile" sx={{ borderRadius: '12px' }}>
+                                <ListItemIcon sx={{ color: '#fb923c', minWidth: 38 }}><PersonIcon /></ListItemIcon>
+                                <ListItemText primary="Profilim" primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 600 }} />
+                            </ListItemButton>
+                        </ListItem>
+
+                        {isAdminUser(user) && (
+                            <ListItem disablePadding sx={{ mb: 1 }}>
+                                <ListItemButton component={RouterLink} to="/admin" sx={{ borderRadius: '12px', bgcolor: 'rgba(212,175,55,0.08)' }}>
+                                    <ListItemIcon sx={{ color: '#FCD34D', minWidth: 38 }}><ShieldIcon /></ListItemIcon>
+                                    <ListItemText primary="Yönetim Paneli" primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 700, color: '#FCD34D' }} />
+                                </ListItemButton>
+                            </ListItem>
+                        )}
+                    </List>
+                </Box>
+
+                {/* Çekmece Alt Kısım: Tema & Çıkış */}
+                <Box sx={{ pt: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                    <Button
+                        fullWidth
+                        startIcon={mode === 'dark' ? <LightIcon /> : <DarkIcon />}
+                        onClick={toggleTheme}
+                        sx={{ color: '#94a3b8', justifyContent: 'flex-start', mb: 1.5, textTransform: 'none' }}
+                    >
+                        {mode === 'dark' ? 'Açık Temaya Geç' : 'Koyu Temaya Geç'}
+                    </Button>
+
+                    <Button
+                        fullWidth
+                        variant="outlined"
+                        color="error"
+                        startIcon={<LogoutIcon />}
+                        onClick={handleLogout}
+                        sx={{ borderRadius: '12px', textTransform: 'none', fontWeight: 600 }}
+                    >
+                        Güvenli Çıkış Yap
+                    </Button>
+                </Box>
+            </Drawer>
+
             <PostModal open={postModalOpen} onClose={() => setPostModalOpen(false)} />
             <MeditationModal open={meditationOpen} onClose={() => setMeditationOpen(false)} />
         </AppBar>

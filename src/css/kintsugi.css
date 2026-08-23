@@ -289,3 +289,39 @@ body.light {
   background: rgba(255,255,255,0.05) !important;
   color: #D4AF37 !important;
 }
+
+/* Mobil Ekran Responsive İyileştirmeleri */
+@media (max-width: 600px) {
+  .kintsugi-container {
+    padding: 0.5rem 0;
+    gap: 1.2rem;
+    width: 100%;
+  }
+
+  .kintsugi-card {
+    padding: 1.25rem 1rem;
+    border-radius: 14px;
+  }
+
+  .kintsugi-text {
+    font-size: 1.05rem;
+    line-height: 1.55;
+  }
+
+  .kintsugi-actions {
+    margin-top: 1.2rem;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .support-btn {
+    padding: 0.45rem 1rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+  }
+
+  .comment-thread {
+    margin-left: 4px;
+    padding-left: 8px;
+  }
+}

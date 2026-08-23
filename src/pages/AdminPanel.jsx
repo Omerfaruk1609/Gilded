@@ -164,14 +164,18 @@ function AdminPanel() {
   );
 
   return (
-    <Container maxWidth="lg" sx={{ py: 6 }}>
+    <Container maxWidth="lg" sx={{ py: { xs: 3, md: 6 }, px: { xs: 1.5, sm: 3 } }}>
       <Typography variant="h3" sx={{ 
         fontFamily: "'Playfair Display', serif", 
         color: '#D4AF37', 
-        mb: 4, 
-        fontWeight: 700 
+        fontWeight: 'bold',
+        mb: 1,
+        fontSize: { xs: '1.75rem', sm: '2.2rem', md: '2.8rem' }
       }}>
-        Yönetim Paneli ✨
+        Yönetim Paneli
+      </Typography>
+      <Typography variant="body1" sx={{ color: '#94a3b8', mb: 4, fontSize: { xs: '0.9rem', md: '1rem' } }}>
+        Kintsugi Space içeriklerini, kullanıcı rollerini, kategorileri ve topluluk şikayetlerini denetleyin.
       </Typography>
 
       {/* Stats Section */}
@@ -196,7 +200,14 @@ function AdminPanel() {
 
       {/* Tabs Section */}
       <Box sx={{ borderBottom: 1, borderColor: 'rgba(212, 175, 55, 0.2)', mb: 3 }}>
-        <Tabs value={tab} onChange={(e, v) => setTab(v)} textColor="inherit" TabIndicatorProps={{ style: { background: '#D4AF37' } }}>
+        <Tabs 
+          value={tab} 
+          onChange={(e, v) => setTab(v)} 
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+          sx={{ '& .MuiTabs-indicator': { bgcolor: '#D4AF37' } }}
+        >
           <Tab label="İçerik Yönetimi" sx={{ color: '#94a3b8', '&.Mui-selected': { color: '#D4AF37' } }} />
           <Tab label="Kullanıcı Yönetimi" sx={{ color: '#94a3b8', '&.Mui-selected': { color: '#D4AF37' } }} />
           <Tab label="Kategori Yönetimi" sx={{ color: '#94a3b8', '&.Mui-selected': { color: '#D4AF37' } }} />
