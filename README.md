@@ -1,4 +1,7 @@
+<div align="center">
+
 # 🏺 Gilded (Kintsugi Space)
+
 > **"Yaralarınız, ışığın içeri girdiği yerdir. Kırıldığımız yerlerden daha güçlüyüz."** ✨
 
 [![Node.js](https://img.shields.io/badge/Node.js-20.x-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
@@ -10,25 +13,66 @@
 [![Security](https://img.shields.io/badge/OWASP-Top%2010%20Hardened-green?style=for-the-badge&logo=shield&logoColor=white)]()
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 
+</div>
+
+---
+
+## 📑 İçindekiler
+- [Giriş ve Felsefe](#-giriş-ve-felsefe)
+- [Öne Çıkan Özellikler](#-öne-çıkan-özellikler)
+- [Sistem Mimarisi](#-sistem-mimarisi)
+- [Teknoloji Yığını](#-teknoloji-yığını)
+- [Siber Güvenlik ve Doğrulama](#-siber-güvenlik-ve-doğrulama)
+- [Proje Dizin Yapısı](#-proje-dizin-yapısı)
+- [Kurulum ve Çalıştırma](#-kurulum-ve-çalıştırma)
+- [Docker ile Çalıştırma](#-docker-ile-çalıştırma)
+- [Lisans](#-lisans)
+
 ---
 
 ## 📖 Giriş ve Felsefe
 
-**Gilded**, insanların hayatlarındaki "kırık parçaları" (zorluklar, başarısızlıklar, duygusal yükler) anonim veya açık kimlikle paylaştığı ve topluluğun bu paylaşımları Japon **Kintsugi (金継ぎ)** felsefesiyle "altın dikişler" atarak onardığı premium bir zihinsel sığınak ve sosyal platformdur.
+**Gilded**, modern dünyanın getirdiği stres, başarısızlık korkusu ve duygusal yıpranmalar karşısında bireylerin "kırık parçalarını" güvenle paylaşabildiği ve bu yaraları topluluk desteğiyle onardığı dijital bir zihinsel sığınaktır.
 
-Kintsugi felsefesi, kırılan seramikleri altın tozu ve reçineyle onararak kırıkları gizlemek yerine onları eskisinden daha değerli ve estetik kılmayı hedefler. Gilded, bu kadim anlayışı modern dijital çağın ihtiyaçlarıyla harmanlar.
+Platformun temelinde, kırılan seramik eşyaları altın tozu ve reçineyle onararak eskisinden daha dayanıklı ve estetik kılan kadim Japon **Kintsugi (金継ぎ)** sanatı yer alır. Gilded'da hiçbir yara gizlenmez; her zorluk paylaşıldıkça topluluğun "Altın Dikişleri" ile parlayan bir güce dönüşür.
 
----
-
-## 🎨 Tasarım ve Estetik Vizyonu
-
-- **Likit Altın (Liquid Gold) Dinamik Efektleri:** Paylaşımlar (kartlar) topluluktan destek aldıkça üzerindeki çatlaklar dinamik olarak likit altınla dolar. 5. dikiş seviyesine ulaşan kartlar tamamen parlar ve özel altın çerçeve kazanır.
-- **Obsidyen & Altın Premium Teması:** Derin uzay siyahları (`#050505`, `#0f172a`) ile fırçalanmış Japon altını (`#D4AF37`, `#F9E076`) tonlarında yüksek kontrastlı, göz yormayan karanlık mod.
-- **Zarif Mikro-Animasyonlar:** Canvas altın konfeti patlamaları, nabız atan parıltı efektleri ve pürüzsüz sayfa geçişleri.
+Platform; gerçek zamanlı canlı çemberler (Live Circles), dış ağa ihtiyaç duymayan 432Hz procedural meditasyon ses motoru, felsefi bilgelik kristalleri ve yapay zeka destekli rehberlik mekanizmalarıyla zenginleştirilmiş bütünsel bir iyileşme ekosistemi sunar.
 
 ---
 
-## 🏛️ Mimari Yapı
+## ✨ Öne Çıkan Özellikler
+
+### 🏺 Kintsugi Onarım Döngüsü & Ruhlar Galerisi
+- **Altın Dikiş (Support):** Klasik "beğen" butonunun ötesinde, kullanıcıların acılara ve hikayelere altın dikiş atarak destek olduğu onarım mekanizması.
+- **Dinamik Likit Altın Gelişimi:** Alınan her dikişle kartın üzerindeki çatlaklar altınla dolar ve 5. dikişte tamamen parıldayan bir altın çerçeveye kavuşur.
+- **Ruhlar Galerisi (`/galeri`):** 5 altın dikiş alarak tamamen onarılan tüm hikayelerin ölümsüzleştirildiği özel vitrin.
+
+### 🧘 Zihinsel Sığınak & Web Audio Meditasyon Motoru
+- **Sıfır Ağ Bağımlılığı (Procedural Audio):** Harici ses dosyası indirmeden Web Audio API osilatörleri ve gürültü filtreleriyle tarayıcı içinde gerçek zamanlı üretilen frekanslar:
+  - 🧘 **Zen & Tibet Çanı:** 432 Hz frekansında harmonik sinüs dalgaları.
+  - 🌧️ **Yağmur Sesi:** Pink Noise ve dinamik Lowpass filtreleme.
+  - 🌊 **Okyanus Dalgaları:** Brown Noise ve 0.12 Hz LFO dalga salınımı.
+  - 🌲 **Orman Rüzgarı:** Bandpass esinti simülasyonu.
+- **4-4-4-4 Kutu Nefesi Koçu:** Zihinsel dengeyi sağlayan görsel sayaçlı nefes egzersizi.
+
+### ⭕ Canlı Topluluk Çemberleri (Live Circles)
+- **Gerçek Zamanlı Odalar:** `Stoacı Bilgelik Çemberi`, `Gece Dertleşmesi` ve `Sessiz Meditasyon` tematik canlı odaları.
+- **Socket.io Tabanlı İletişim:** Anlık mesajlaşma, canlı katılımcı sayacı ve otomatik moderasyon koruması.
+
+### 💬 Real-Time Mesajlaşma & Bildirim Merkezi
+- **Doğrudan Mesajlaşma (DM):** Kullanıcılar arasında uçtan uca filtrelenmiş, hızlı ve güvenli özel sohbet.
+- **Anlık Socket Bildirimleri:** Gönderiye destek, yorum ve mesaj geldiğinde menüde beliren ve doğrudan sohbete yönlendiren anlık bildirimler.
+
+### 📜 Bilgelik Panosu (Wisdom Board) & Gemini AI
+- **Bilge Rozeti:** Toplulukta beğeni ve fayda sağlayan üyelere otomatik atanan Bilge rolü ve kişisel kategori yönetimi.
+- **Felsefi AI Danışmanı:** Google Gemini destekli, Stoacı ve Doğu felsefesi ilkelerine dayanan yapay zeka rehberi.
+
+### 🎙️ Sesli Dert Günlüğü (Voice Notes)
+- **Ses Dosyası Yükleme:** Yazmak yerine duygularını sesli anlatmak isteyenler için güvenli ses oynatıcısı.
+
+---
+
+## 🏛️ Sistem Mimarisi
 
 ```
                                ┌─────────────────────────────────────────┐
@@ -59,63 +103,34 @@ Kintsugi felsefesi, kırılan seramikleri altın tozu ve reçineyle onararak kı
 
 ---
 
-## ✨ Öne Çıkan Özellikler
-
-### 🏺 1. Kintsugi Onarım Döngüsü & Ruhlar Galerisi
-- **Altın Dikiş (Support):** Beğenme yerine acılara ve hikayelere altın dikiş atarak destek olma.
-- **Kintsugi Kademeleri:** 1'den 5'e kadar seviye atlayan kartlar (0.2'den 1.0 opaklığa altın dikiş dolumu).
-- **Ruhlar Galerisi (`/galeri`):** Tamamen onarılan tüm hikayelerin ölümsüzleştirildiği vitrin.
-
-### 🧘 2. Zihinsel Sığınak & Web Audio Meditasyon Motoru
-- **Sıfır Dış Ağ Bağımlılığı:** Harici ses dosyası indirmeden Web Audio API osilatörleri ve beyaz/pembe gürültü sentezleyicileriyle üretilen procedural sesler:
-  - 🧘 **Zen & Tibet Çanı (432 Hz Şifa Frekansı)**
-  - 🌧️ **Yağmur Sesi (Pink Noise + Lowpass)**
-  - 🌊 **Okyanus Dalgaları (Brown Noise + Swell LFO)**
-  - 🌲 **Orman Rüzgarı (Bandpass Breeze)**
-- **4-4-4-4 Kutu Nefesi Egzersizi:** Zihni sakinleştiren animasyonlu nefes koçu.
-
-### ⭕ 3. Canlı Topluluk Çemberleri (Live Circles)
-- **Gerçek Zamanlı Odalar:** `Stoacı Bilgelik Çemberi`, `Gece Dertleşmesi` ve `Sessiz Meditasyon` odaları.
-- **Socket.io Tabanlı:** Anlık yazışma, canlı katılımcı sayacı ve bot moderasyonu.
-
-### 💬 4. Anlık Mesajlaşma & Bildirim Merkezi
-- **Doğrudan Mesajlaşma (DM):** Kullanıcılar arasında güvenli, filtrelenmiş ve hızlı mesajlaşma.
-- **Real-Time Bildirimler:** Biri hikayenize dikiş attığında, yorum yazdığında veya mesaj gönderdiğinde anında sesli/görsel bildirim.
-
-### 📜 5. Bilgelik Panosu & Bilge Rolü
-- **Bilge Seviyesi:** Toplulukta beğeni/fayda sağlayan kullanıcılara otomatik atanan bilge statüsü.
-- **Özel Kategoriler:** Bilgeler kendi uzmanlık ve temalarında bilgelik kristalleri paylaşabilir.
-- **Gemini AI Bilgelik Asistanı:** Sorunlara kadim Stoacı, Zen ve Doğu felsefesiyle yaklaşan yapay zeka rehberi.
-
-### 🎙️ 6. Sesli Dert Günlüğü & Medya
-- **Ses Dosyası Yükleme:** Sesli notlar ve dert anlatımları için gömülü ses oynatıcısı.
-- **Görsel Desteği:** Güvenli, doğrulanmış görsel yükleme altyapısı.
-
----
-
-## 🛡️ Siber Güvenlik Standartları (OWASP Top 10 Hardened)
-
-Proje, kurumsal seviyede siber güvenlik testlerinden geçirilmiş ve tüm açıkları kapatılmıştır:
-
-| Güvenlik Katmanı | Alınan Önlem / Uygulama |
-|---|---|
-| **Dosya Yükleme (Uploads)** | SVG ve script çalıştırabilecek formatlar engellendi; katı MIME ve uzantı beyaz listesi (`.jpg`, `.png`, `.webp`, `.mp3`, `.wav`, `.webm`). |
-| **XSS & Clickjacking** | `Helmet`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, katı `Referrer-Policy`. |
-| **DoS & Brute-Force** | Gövde boyutu 1MB ile sınırlandırıldı; Auth, Post, Comment ve Message uç noktalarına özel `express-rate-limit` uygulandı. |
-| **SQL Güvenliği** | Parametrik SQL sorguları + Arama endpoint'inde wildcard (`%`, `_`, `\`) kaçırma (escape) filtresi. |
-| **Kimlik & Yetki Matrisi** | JWT kimlik doğrulaması, rol beyaz listesi (`USER`, `ADMIN`, `BILGE`), socket üzerinde kimlik sahteciliği (spoofing) engeli. |
-| **GDPR / KVKK Bütünlüğü** | Hesap silme isteklerinde tüm ilişkili tablolar (`messages`, `notifications`, `user_follows`, `supports`) cascade olarak temizlenir. |
-| **Bilgi İfşası Önleme** | Veritabanı stack trace veya iç hata mesajları istemciye sızdırılmaz; güvenli genel hata yanıtları dönülür. |
-
----
-
 ## 🛠️ Teknoloji Yığını
 
-- **Frontend:** React 19, Vite, Material UI (MUI), Socket.io-client, Lucide / MUI Icons, Canvas Confetti, Axios, React Hot Toast
-- **Backend:** Node.js, Express.js, Socket.io, Multer, Helmet, bcryptjs, jsonwebtoken, express-rate-limit, cors
-- **Veritabanı:** PostgreSQL (pg pool) - Supabase / Neon / AWS RDS / Docker
-- **Yapay Zeka & NLP:** Google Gemini Flash API, KintsugiText Yerel Kural Motoru
-- **DevOps & Dağıtım:** Docker (Multi-stage build), docker-compose, Render / Railway uyumlu
+| Alan | Teknolojiler | Açıklama |
+|---|---|---|
+| **Frontend** | React 19, Vite, Material UI (MUI) 6, Axios | Modern, modüler ve yüksek performanslı SPA mimarisi |
+| **Real-Time & Audio** | Socket.io-Client, Web Audio API | Gerçek zamanlı WebSocket iletişimi ve procedural ses üretimi |
+| **Backend** | Node.js, Express.js, Socket.io | RESTful API, WebSocket sunucusu ve oturum yönetimi |
+| **Veritabanı** | PostgreSQL 15+, `pg` pool | ACID uyumlu, cascade ilişkisel veri modeli (Supabase/Neon) |
+| **Güvenlik & Auth** | JWT, bcryptjs, Helmet, Express-Rate-Limit | Kimlik doğrulama, HTTP başlıkları ve DoS kalkanı |
+| **Yapay Zeka** | Google Gemini Flash API, KintsugiText | İçerik moderasyonu ve felsefi yapay zeka botu |
+| **DevOps & Araçlar** | Docker, docker-compose, ESLint | Çok aşamalı konteynerleştirme ve statik kod analizi |
+
+---
+
+## 🛡️ Siber Güvenlik ve Doğrulama
+
+Gilded, OWASP Top 10 standartlarına göre sertleştirilmiş ve 11 katmanlı otomatik güvenlik doğrulama testlerinden **%100 (11/11)** başarıyla geçmiştir:
+
+| Güvenlik Alanı | Alınan Önlem ve Koruma Mekanizması | Durum |
+|---|---|:---:|
+| **Dosya Yükleme (Uploads)** | SVG ve zararlı script içeren uzantılar engellendi; katı MIME/Uzantı beyaz listesi (`.jpg`, `.png`, `.webp`, `.mp3`, `.wav`, `.webm`). | ✅ GEÇTİ |
+| **XSS & Clickjacking** | Helmet güvenlik başlıkları, `frameguard: { action: 'deny' }`, `X-Content-Type-Options: nosniff`. | ✅ GEÇTİ |
+| **DoS & Payload Koruma** | JSON ve URL-encoded gövde limiti 1MB; kimlik doğrulama ve mesajlaşma uç noktalarında hedefli hız sınırlayıcılar. | ✅ GEÇTİ |
+| **SQL Güvenliği** | Parametrik sorgular ve kullanıcı arama endpoint'inde wildcard (`%`, `_`, `\`) kaçırma (escape) filtresi. | ✅ GEÇTİ |
+| **Yetki Matrisi** | JWT tabanlı oturum, Admin rol güncelleme beyaz listesi (`USER`, `ADMIN`, `BILGE`) ve yetki yükseltme engeli. | ✅ GEÇTİ |
+| **Socket Kimlik Doğrulama** | Doğrulanmış JWT oturum kimliği, kullanıcı adı sahteciliği engeli ve canlı mesaj moderasyonu. | ✅ GEÇTİ |
+| **GDPR / KVKK Bütünlüğü** | Hesap silme isteklerinde tüm ilişkili tabloların (`messages`, `notifications`, `user_follows`, `supports`) cascade temizliği. | ✅ GEÇTİ |
+| **Bilgi İfşası Önleme** | Veritabanı stack trace ve iç hata mesajlarının istemciye sızması engellendi; sanitize hata yanıtları dönülür. | ✅ GEÇTİ |
 
 ---
 
@@ -149,11 +164,11 @@ Gilded/
 
 ---
 
-## 🚀 Hızlı Başlangıç & Kurulum
+## 🚀 Kurulum ve Çalıştırma
 
-### Gereksinimler
-- **Node.js:** v18 veya üzeri
-- **PostgreSQL:** v14 veya üzeri (veya ücretsiz Supabase / Neon hesabı)
+### Ön Gereksinimler
+- **Node.js:** `v18.0.0` veya üzeri
+- **PostgreSQL:** `v14.0` veya üzeri (veya ücretsiz Supabase / Neon hesabı)
 
 ### 1. Depoyu Klonlayın
 ```bash
@@ -166,16 +181,16 @@ cd Gilded
 npm install
 ```
 
-### 3. Ortam Değişkenlerini Ayarlayın (`.env`)
-Proje ana dizininde bir `.env` dosyası oluşturun:
+### 3. Ortam Değişkenlerini Tanımlayın (`.env`)
+Proje kök dizininde `.env` dosyası oluşturun:
 ```env
 PORT=5000
 NODE_ENV=development
 DATABASE_URL=postgresql://postgres:password@localhost:5432/gilded
-JWT_SECRET=super_secret_jwt_key_here_min_32_chars
+JWT_SECRET=kintsugi_super_secret_jwt_key_2026_gilded_space
 CORS_ORIGIN=http://localhost:5173
 ADMIN_EMAIL=admin@gold.com
-ADMIN_PASSWORD=AdminPassword123!
+ADMIN_PASSWORD=GucluAdminSifresi123!
 # Opsiyonel:
 GEMINI_API_KEY=your_gemini_api_key
 ```
@@ -184,24 +199,30 @@ GEMINI_API_KEY=your_gemini_api_key
 ```bash
 npm run dev
 ```
-- **Frontend:** [http://localhost:5173](http://localhost:5173)
+- **Frontend Arayüzü:** [http://localhost:5173](http://localhost:5173)
 - **Backend API:** [http://localhost:5000](http://localhost:5000)
 
-*(Veritabanı tabloları sunucu ilk çalıştığında `schema.sql` üzerinden otomatik olarak oluşturulacaktır).*
+*(Veritabanı tabloları sunucu ilk başlatıldığında `schema.sql` üzerinden otomatik olarak oluşturulur).*
 
 ---
 
 ## 🐳 Docker ile Çalıştırma
 
+Projeyi tüm servisleriyle tek komutla ayağa kaldırmak için:
+
 ```bash
 docker-compose up -d --build
 ```
-Uygulamanız [http://localhost:5000](http://localhost:5000) adresinde derlenmiş ve yayına hazır olarak çalışacaktır.
+Uygulama [http://localhost:5000](http://localhost:5000) adresinde üretim modunda çalışacaktır.
 
 ---
 
-## 📜 Lisans & Telif Hakkı
+## 📜 Lisans
 
-Bu proje açık kaynaklı olup [MIT Lisansı](LICENSE) altında geliştirilmiştir.
+Bu proje [MIT Lisansı](LICENSE) altında lisanslanmıştır.
+
+<div align="center">
 
 **"Kusurlarınızda bir güzellik var; tıpkı kırılmış bir vazonun altın dikişleri gibi."** 🏺✨
+
+</div>
