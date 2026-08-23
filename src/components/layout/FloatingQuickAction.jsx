@@ -4,7 +4,7 @@ import {
   AutoAwesome as AutoAwesomeIcon,
   SelfImprovement as SelfImprovementIcon,
   MenuBook as MenuBookIcon,
-  HelpOutline as HelpOutlineIcon,
+  Help as HelpOutlineIcon,
   EditNote as EditNoteIcon,
   WorkspacePremium as GalleryIcon,
   InfoOutlined as InfoIcon,

@@ -12,7 +12,7 @@ import {
 import {
   ExpandMore as ExpandMoreIcon,
   Search as SearchIcon,
-  HelpOutline as HelpOutlineIcon
+  Help as HelpOutlineIcon
 } from '@mui/icons-material'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 

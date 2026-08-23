@@ -1,7 +1,7 @@
 import { Box, Button, Container, Typography } from '@mui/material'
 import { Link as RouterLink } from 'react-router-dom'
 import {
-  CheckCircleOutline as CheckCircleOutlineIcon,
+  CheckCircle as CheckCircleOutlineIcon,
   AutoAwesome as AutoAwesomeIcon
 } from '@mui/icons-material'
 import useDocumentTitle from '../hooks/useDocumentTitle'
