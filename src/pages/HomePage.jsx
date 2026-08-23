@@ -6,8 +6,6 @@ import PostForm from '../components/feed/PostForm'
 import apiClient from '../services/apiClient'
 import { getStoredUser } from '../services/auth'
 import useDocumentTitle from '../hooks/useDocumentTitle'
-import TestimonialsSection from '../components/home/TestimonialsSection'
-import CaseStudiesSection from '../components/home/CaseStudiesSection'
 
 function HomePage() {
   useDocumentTitle('Ana Sayfa - Kusurların Altınla Onarımı', 'Kırılma anlarınızı paylaşın, Kintsugi felsefesiyle topluluğun desteğini alın.')
@@ -158,12 +156,6 @@ function HomePage() {
           ))
         )}
       </div>
-
-      {/* Case Studies / Vaka Çalışmaları (Item 6) */}
-      <CaseStudiesSection />
-
-      {/* Testimonials / Topluluk Yorumları (Item 15) */}
-      <TestimonialsSection />
     </Container>
   )
 }
