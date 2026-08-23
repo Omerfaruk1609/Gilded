@@ -200,15 +200,6 @@ Uygulamanız [http://localhost:5000](http://localhost:5000) adresinde derlenmiş
 
 ---
 
-## 🌐 Canlıya Alma (Production Deployment)
-
-Proje, **Render**, **Railway**, **Fly.io** veya herhangi bir VPS (Ubuntu/Nginx) üzerinde tek tıkla çalışacak şekilde yapılandırılmıştır:
-- **Build Command:** `npm install && npm run build`
-- **Start Command:** `npm start`
-- `NODE_ENV=production` tanımlandığında backend, Vite frontend build (`dist/`) klasörünü statik olarak sunar ve SPA rotalarını otomatik yönetir.
-
----
-
 ## 📜 Lisans & Telif Hakkı
 
 Bu proje açık kaynaklı olup [MIT Lisansı](LICENSE) altında geliştirilmiştir.
