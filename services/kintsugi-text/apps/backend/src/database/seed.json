@@ -2,7 +2,7 @@
   "rules": [
     {
       "id": "rule_profanity_gilded_core",
-      "pattern": "(amk|aq|sg|siktir|o\\s*ç|orospu|piç|yavşak|göt|salak|aptal|mal|gerizekalı|amcık|sik|yarrak|şerefsiz|küfür)",
+      "pattern": "(?:^|[^a-zçğıöşü0-9])(?:amk|aq(?=[^a-zçğıöşü0-9]|$)|sg(?=[^a-zçğıöşü0-9]|$)|siktir|o\\s*ç(?=[^a-zçğıöşü0-9]|$)|orospu|piç|yavşak|göt(?!ür|eborg)(?:[^a-zçğıöşü0-9]|$|ü|ün|e|ler|oş|lek|veren|ten|t[eü]n|üm)|salak|aptal|mal(?:lar|s[ıi]n|s[ıi]n[ıi]z|l[ıi]k|l[ıi]ğ[ıi]|ca)?(?=[^a-zçğıöşü0-9]|$)|gerizekalı|amcık|sik(?!let)(?:[^a-zçğıöşü0-9]|$|t[iı]r|ik|erim|eyim|tim|tiler|ti|iyor|er|iş|e|ine|sen|ler)|yarrak|şerefsiz|küfür)",
       "category": "PROFANITY",
       "score": 0.90,
       "reason": "Küfür, hakaret ve argo tespiti (Gilded Güvenlik Kuralı)",

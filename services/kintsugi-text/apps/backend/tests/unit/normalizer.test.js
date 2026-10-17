@@ -46,4 +46,10 @@ test('TurkishTextNormalizer Unit Tests', async (t) => {
     assert.equal(TurkishTextNormalizer.normalize('ÇÖP'), 'çöp');
     assert.equal(TurkishTextNormalizer.normalize('İĞRENÇ'), 'iğrenç');
   });
+
+  await t.test('should preserve spaces between normal multi-letter words', () => {
+    assert.equal(TurkishTextNormalizer.normalize('Malatya kayısısı dünyaca meşhurdur'), 'malatya kayısısı dünyaca meşhurdur');
+    assert.equal(TurkishTextNormalizer.normalize('Mustafa Kemal Atatürk'), 'mustafa kemal atatürk');
+    assert.equal(TurkishTextNormalizer.normalize('bu harika bir proje'), 'bu harika bir proje');
+  });
 });

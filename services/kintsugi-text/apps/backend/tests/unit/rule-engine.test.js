@@ -43,4 +43,41 @@ test('RuleEngineService Unit Tests', async (t) => {
     const result = ruleEngine.evaluate('s.4.l.4.m');
     assert.ok(result.normalizedText.includes('salam'));
   });
+
+  await t.test('should NOT flag innocent words containing substring collisions like Malatya, normal, Kemal, eksik, bisiklet, götür', () => {
+    const benignSamples = [
+      'Malatya kayısısı çok lezzetlidir',
+      'Bugün hava çok normal',
+      'Mustafa Kemal Atatürk',
+      'Bu raporda bazı belgeler eksik',
+      'Hafta sonu bisiklet sürdük',
+      'Lütfen bu evrakları müdüre götür',
+      'Meksika mutfağı çok zengin',
+      'Maliyet hesaplaması ve malzeme alımı tamamlandı',
+      'Koç Üniversitesi kampüsü çok güzel'
+    ];
+
+    for (const sample of benignSamples) {
+      const res = ruleEngine.evaluate(sample);
+      assert.equal(res.flagged, false, `Expected "${sample}" NOT to be flagged, but got flagged with score ${res.highestScore}`);
+      assert.equal(res.violations.length, 0);
+    }
+  });
+
+  await t.test('should correctly flag genuine insults with mal and its suffixes', () => {
+    const maliciousMalSamples = [
+      'sen tam bir malsın',
+      'ne kadar mal bir insansın',
+      'bunlar tam mal',
+      'mallar toplanmış yine',
+      'mallık yapma'
+    ];
+
+    for (const sample of maliciousMalSamples) {
+      const res = ruleEngine.evaluate(sample);
+      assert.equal(res.flagged, true, `Expected "${sample}" to be flagged as insult`);
+      assert.ok(res.highestScore >= 0.85);
+      assert.ok(res.violations.some(v => v.category === 'PROFANITY'));
+    }
+  });
 });

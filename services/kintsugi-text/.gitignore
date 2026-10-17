@@ -147,3 +147,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
+
+# Large dataset files
+apps/ai-service/data/*.csv
+

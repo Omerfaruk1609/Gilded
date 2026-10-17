@@ -2,7 +2,7 @@
   "rules": [
     {
       "id": "rule_profanity_gilded_core",
-      "pattern": "(amk|aq|sg|siktir|o\\s*ç|orospu|piç|yavşak|göt|salak|aptal|mal|gerizekalı|amcık|sik|yarrak|şerefsiz|küfür)",
+      "pattern": "(?:^|[^a-zçğıöşü0-9])(?:amk|aq(?=[^a-zçğıöşü0-9]|$)|sg(?=[^a-zçğıöşü0-9]|$)|siktir|o\\s*ç(?=[^a-zçğıöşü0-9]|$)|orospu|piç|yavşak|göt(?!ür|eborg)(?:[^a-zçğıöşü0-9]|$|ü|ün|e|ler|oş|lek|veren|ten|t[eü]n|üm)|salak|aptal|mal(?:lar|s[ıi]n|s[ıi]n[ıi]z|l[ıi]k|l[ıi]ğ[ıi]|ca)?(?=[^a-zçğıöşü0-9]|$)|gerizekalı|amcık|sik(?!let)(?:[^a-zçğıöşü0-9]|$|t[iı]r|ik|erim|eyim|tim|tiler|ti|iyor|er|iş|e|ine|sen|ler)|yarrak|şerefsiz|küfür)",
       "category": "PROFANITY",
       "score": 0.9,
       "reason": "Küfür, hakaret ve argo tespiti (Gilded Güvenlik Kuralı)",
@@ -77,6 +77,1504 @@
     }
   ],
   "analysis_logs": [
+    {
+      "id": "log_1792253596258_d6uk",
+      "correlation_id": "corr_test_1792253596258",
+      "text": "Log test metni",
+      "verdict": "APPROVED",
+      "risk_score": 10,
+      "created_at": "2026-10-17T16:13:16.258Z"
+    },
+    {
+      "id": "log_1792249448368_k6x6",
+      "correlation_id": "corr_1792249448363_8ylqa",
+      "text": "Önbellek test metni #1792249448363",
+      "sanitized_text": "önbellek test metni #it922a9aa8e6e",
+      "verdict": "APPROVED",
+      "risk_score": 0,
+      "violations": [],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 1,
+          "flagged": false,
+          "score": 0,
+          "matches": []
+        },
+        "tier2": {
+          "executed": true,
+          "duration_ms": 0,
+          "ai_used": true,
+          "scores": {
+            "toxicity": 0.05,
+            "hate_speech": 0.02,
+            "spam": 0.01,
+            "implicit_threat": 0.01
+          }
+        }
+      },
+      "created_at": "2026-10-17T15:04:08.368Z"
+    },
+    {
+      "id": "log_1792249448360_6qy9",
+      "correlation_id": "corr_1792249448352_nr5ct",
+      "text": "Seni bulduğum yerde gününü göreceksin.",
+      "sanitized_text": "seni bulduğum yerde gününü göreceksin.",
+      "verdict": "REJECTED",
+      "risk_score": 98,
+      "violations": [
+        {
+          "category": "IMPLICIT_THREAT",
+          "score": 0.98,
+          "reason": "Yerel AI Modeli: Şahsa yönelik tehdit veya fiziksel zarar verme niyeti tespiti"
+        }
+      ],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": false,
+          "score": 0,
+          "matches": []
+        },
+        "tier2": {
+          "executed": true,
+          "duration_ms": 0,
+          "ai_used": true,
+          "scores": {
+            "toxicity": 0.8,
+            "hate_speech": 0.02,
+            "spam": 0.01,
+            "implicit_threat": 0.98
+          }
+        }
+      },
+      "created_at": "2026-10-17T15:04:08.361Z"
+    },
+    {
+      "id": "log_1792249448350_r1r8",
+      "correlation_id": "corr_1792249448349_azkiw",
+      "text": "Sen ne salak ve şerefsiz birisin amk!",
+      "sanitized_text": "sen ne salak ve şerefsiz birisin amk!",
+      "verdict": "REJECTED",
+      "risk_score": 90,
+      "violations": [
+        {
+          "category": "PROFANITY",
+          "action": "block",
+          "severity": 3,
+          "score": 0.9,
+          "reason": "Küfür, hakaret ve argo tespiti (Gilded Güvenlik Kuralı)",
+          "matched_pattern": "(?:^|[^a-zçğıöşü0-9])(?:amk|aq(?=[^a-zçğıöşü0-9]|$)|sg(?=[^a-zçğıöşü0-9]|$)|siktir|o\\s*ç(?=[^a-zçğıöşü0-9]|$)|orospu|piç|yavşak|göt(?!ür|eborg)(?:[^a-zçğıöşü0-9]|$|ü|ün|e|ler|oş|lek|veren|ten|t[eü]n|üm)|salak|aptal|mal(?:lar|s[ıi]n|s[ıi]n[ıi]z|l[ıi]k|l[ıi]ğ[ıi]|ca)?(?=[^a-zçğıöşü0-9]|$)|gerizekalı|amcık|sik(?!let)(?:[^a-zçğıöşü0-9]|$|t[iı]r|ik|erim|eyim|tim|tiler|ti|iyor|er|iş|e|ine|sen|ler)|yarrak|şerefsiz|küfür)"
+        }
+      ],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 1,
+          "flagged": true,
+          "score": 90,
+          "matches": [
+            {
+              "rule_id": "rule_profanity_gilded_core",
+              "pattern": "(?:^|[^a-zçğıöşü0-9])(?:amk|aq(?=[^a-zçğıöşü0-9]|$)|sg(?=[^a-zçğıöşü0-9]|$)|siktir|o\\s*ç(?=[^a-zçğıöşü0-9]|$)|orospu|piç|yavşak|göt(?!ür|eborg)(?:[^a-zçğıöşü0-9]|$|ü|ün|e|ler|oş|lek|veren|ten|t[eü]n|üm)|salak|aptal|mal(?:lar|s[ıi]n|s[ıi]n[ıi]z|l[ıi]k|l[ıi]ğ[ıi]|ca)?(?=[^a-zçğıöşü0-9]|$)|gerizekalı|amcık|sik(?!let)(?:[^a-zçğıöşü0-9]|$|t[iı]r|ik|erim|eyim|tim|tiler|ti|iyor|er|iş|e|ine|sen|ler)|yarrak|şerefsiz|küfür)",
+              "type": "PROFANITY"
+            }
+          ]
+        },
+        "tier2": {
+          "executed": false,
+          "duration_ms": 0,
+          "ai_used": false
+        }
+      },
+      "created_at": "2026-10-17T15:04:08.350Z"
+    },
+    {
+      "id": "log_1792249448346_rrlt",
+      "correlation_id": "corr_1792249448278_whl0t",
+      "text": "Bugün hava çok güzel ve ekip olarak harika iş çıkardık.",
+      "sanitized_text": "bugün hava çok güzel ve ekip olarak harika iş çıkardık.",
+      "verdict": "APPROVED",
+      "risk_score": 0,
+      "violations": [],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 2,
+          "flagged": false,
+          "score": 0,
+          "matches": []
+        },
+        "tier2": {
+          "executed": true,
+          "duration_ms": 0,
+          "ai_used": true,
+          "scores": {
+            "toxicity": 0.05,
+            "hate_speech": 0.02,
+            "spam": 0.01,
+            "implicit_threat": 0.01
+          }
+        }
+      },
+      "created_at": "2026-10-17T15:04:08.346Z"
+    },
+    {
+      "id": "log_1792249447751_k7oe",
+      "correlation_id": "corr_test_1792249447751",
+      "text": "Log test metni",
+      "verdict": "APPROVED",
+      "risk_score": 10,
+      "created_at": "2026-10-17T15:04:07.751Z"
+    },
+    {
+      "id": "log_1792093093120_egb7",
+      "correlation_id": "corr_1792093093115_dvx3k",
+      "text": "Önbellek test metni #1792093093114",
+      "sanitized_text": "önbellek test metni #it92o9eo9eiia",
+      "verdict": "APPROVED",
+      "risk_score": 0,
+      "violations": [],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": false,
+          "score": 0,
+          "matches": []
+        },
+        "tier2": {
+          "executed": true,
+          "duration_ms": 0,
+          "ai_used": true,
+          "scores": {
+            "toxicity": 0.05,
+            "hate_speech": 0.02,
+            "spam": 0.01,
+            "implicit_threat": 0.01
+          }
+        }
+      },
+      "created_at": "2026-10-15T19:38:13.120Z"
+    },
+    {
+      "id": "log_1792093093112_g7uf",
+      "correlation_id": "corr_1792093093107_44cnl",
+      "text": "Seni bulduğum yerde gününü göreceksin.",
+      "sanitized_text": "seni bulduğum yerde gününü göreceksin.",
+      "verdict": "REJECTED",
+      "risk_score": 98,
+      "violations": [
+        {
+          "category": "IMPLICIT_THREAT",
+          "score": 0.98,
+          "reason": "Yerel AI Modeli: Şahsa yönelik tehdit veya fiziksel zarar verme niyeti tespiti"
+        }
+      ],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": false,
+          "score": 0,
+          "matches": []
+        },
+        "tier2": {
+          "executed": true,
+          "duration_ms": 0,
+          "ai_used": true,
+          "scores": {
+            "toxicity": 0.8,
+            "hate_speech": 0.02,
+            "spam": 0.01,
+            "implicit_threat": 0.98
+          }
+        }
+      },
+      "created_at": "2026-10-15T19:38:13.112Z"
+    },
+    {
+      "id": "log_1792093093104_06wh",
+      "correlation_id": "corr_1792093093104_og8ee",
+      "text": "Sen ne salak ve şerefsiz birisin amk!",
+      "sanitized_text": "sen ne salak ve şerefsiz birisin amk!",
+      "verdict": "REJECTED",
+      "risk_score": 90,
+      "violations": [
+        {
+          "category": "PROFANITY",
+          "action": "block",
+          "severity": 3,
+          "score": 0.9,
+          "reason": "Küfür, hakaret ve argo tespiti (Gilded Güvenlik Kuralı)",
+          "matched_pattern": "(?:^|[^a-zçğıöşü0-9])(?:amk|aq(?=[^a-zçğıöşü0-9]|$)|sg(?=[^a-zçğıöşü0-9]|$)|siktir|o\\s*ç(?=[^a-zçğıöşü0-9]|$)|orospu|piç|yavşak|göt(?!ür|eborg)(?:[^a-zçğıöşü0-9]|$|ü|ün|e|ler|oş|lek|veren|ten|t[eü]n|üm)|salak|aptal|mal(?:lar|s[ıi]n|s[ıi]n[ıi]z|l[ıi]k|l[ıi]ğ[ıi]|ca)?(?=[^a-zçğıöşü0-9]|$)|gerizekalı|amcık|sik(?!let)(?:[^a-zçğıöşü0-9]|$|t[iı]r|ik|erim|eyim|tim|tiler|ti|iyor|er|iş|e|ine|sen|ler)|yarrak|şerefsiz|küfür)"
+        }
+      ],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": true,
+          "score": 90,
+          "matches": [
+            {
+              "rule_id": "rule_profanity_gilded_core",
+              "pattern": "(?:^|[^a-zçğıöşü0-9])(?:amk|aq(?=[^a-zçğıöşü0-9]|$)|sg(?=[^a-zçğıöşü0-9]|$)|siktir|o\\s*ç(?=[^a-zçğıöşü0-9]|$)|orospu|piç|yavşak|göt(?!ür|eborg)(?:[^a-zçğıöşü0-9]|$|ü|ün|e|ler|oş|lek|veren|ten|t[eü]n|üm)|salak|aptal|mal(?:lar|s[ıi]n|s[ıi]n[ıi]z|l[ıi]k|l[ıi]ğ[ıi]|ca)?(?=[^a-zçğıöşü0-9]|$)|gerizekalı|amcık|sik(?!let)(?:[^a-zçğıöşü0-9]|$|t[iı]r|ik|erim|eyim|tim|tiler|ti|iyor|er|iş|e|ine|sen|ler)|yarrak|şerefsiz|küfür)",
+              "type": "PROFANITY"
+            }
+          ]
+        },
+        "tier2": {
+          "executed": false,
+          "duration_ms": 0,
+          "ai_used": false
+        }
+      },
+      "created_at": "2026-10-15T19:38:13.104Z"
+    },
+    {
+      "id": "log_1792093093101_dv2v",
+      "correlation_id": "corr_1792093093033_1opck",
+      "text": "Bugün hava çok güzel ve ekip olarak harika iş çıkardık.",
+      "sanitized_text": "bugün hava çok güzel ve ekip olarak harika iş çıkardık.",
+      "verdict": "APPROVED",
+      "risk_score": 0,
+      "violations": [],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 3,
+          "flagged": false,
+          "score": 0,
+          "matches": []
+        },
+        "tier2": {
+          "executed": true,
+          "duration_ms": 0,
+          "ai_used": true,
+          "scores": {
+            "toxicity": 0.05,
+            "hate_speech": 0.02,
+            "spam": 0.01,
+            "implicit_threat": 0.01
+          }
+        }
+      },
+      "created_at": "2026-10-15T19:38:13.101Z"
+    },
+    {
+      "id": "log_1792093093012_gi4g",
+      "correlation_id": "corr_1792093093012_ebdjz",
+      "text": "Seni bulduğum yerde geberteceğim.",
+      "sanitized_text": "seni bulduğum yerde geberteceğim.",
+      "verdict": "REJECTED",
+      "risk_score": 95,
+      "violations": [
+        {
+          "category": "IMPLICIT_THREAT",
+          "action": "block",
+          "severity": 3,
+          "score": 0.95,
+          "reason": "Kendine veya başkasına zarar verme / şiddet tespiti (Gilded Kuralı)",
+          "matched_pattern": "(kendini\\s*öldür|intihar|geber|geberteceğim|öldürürüm)"
+        }
+      ],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": true,
+          "score": 95,
+          "matches": [
+            {
+              "rule_id": "rule_gilded_self_harm_threat",
+              "pattern": "(kendini\\s*öldür|intihar|geber|geberteceğim|öldürürüm)",
+              "type": "IMPLICIT_THREAT"
+            }
+          ]
+        },
+        "tier2": {
+          "executed": false,
+          "duration_ms": 0,
+          "ai_used": false
+        }
+      },
+      "created_at": "2026-10-15T19:38:13.012Z"
+    },
+    {
+      "id": "log_1792093093007_436o",
+      "correlation_id": "corr_1792093093006_n0zua",
+      "text": "Git kendini öldür, geber.",
+      "sanitized_text": "git kendini öldür, geber.",
+      "verdict": "REJECTED",
+      "risk_score": 95,
+      "violations": [
+        {
+          "category": "IMPLICIT_THREAT",
+          "action": "block",
+          "severity": 3,
+          "score": 0.95,
+          "reason": "Kendine veya başkasına zarar verme / şiddet tespiti (Gilded Kuralı)",
+          "matched_pattern": "(kendini\\s*öldür|intihar|geber|geberteceğim|öldürürüm)"
+        }
+      ],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": true,
+          "score": 95,
+          "matches": [
+            {
+              "rule_id": "rule_gilded_self_harm_threat",
+              "pattern": "(kendini\\s*öldür|intihar|geber|geberteceğim|öldürürüm)",
+              "type": "IMPLICIT_THREAT"
+            }
+          ]
+        },
+        "tier2": {
+          "executed": false,
+          "duration_ms": 0,
+          "ai_used": false
+        }
+      },
+      "created_at": "2026-10-15T19:38:13.007Z"
+    },
+    {
+      "id": "log_1792093092997_f7zl",
+      "correlation_id": "corr_1792093092997_56v17",
+      "text": "Sen ezik ve güçsüz birisin, yapamazsın beceriksiz.",
+      "sanitized_text": "sen ezik ve güçsüz birisin, yapamazsın beceriksiz.",
+      "verdict": "REJECTED",
+      "risk_score": 85,
+      "violations": [
+        {
+          "category": "TOXICITY",
+          "action": "block",
+          "severity": 3,
+          "score": 0.85,
+          "reason": "Topluluk destek ruhuna aykırı, alaycı ve küçümseyici ifade tespiti (Gilded Kuralı)",
+          "matched_pattern": "(boş\\s*yapma|boş\\s*konuşma|ilgi\\s*meraklısı|prim\\s*yapma|geç\\s*bunları|kimin\\s*umrunda|bana\\s*ne|banane|çok\\s*da\\s*tın|yalan\\s*söylüyorsun|beceriksiz|yapamazsın|zayıfsın|güçsüzsün|ezik|sana\\s*müstahak|iyi\\s*olmuş|hak\\s*etmişsin|beter\\s*ol)"
+        }
+      ],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": true,
+          "score": 85,
+          "matches": [
+            {
+              "rule_id": "rule_gilded_sanctuary_toxic",
+              "pattern": "(boş\\s*yapma|boş\\s*konuşma|ilgi\\s*meraklısı|prim\\s*yapma|geç\\s*bunları|kimin\\s*umrunda|bana\\s*ne|banane|çok\\s*da\\s*tın|yalan\\s*söylüyorsun|beceriksiz|yapamazsın|zayıfsın|güçsüzsün|ezik|sana\\s*müstahak|iyi\\s*olmuş|hak\\s*etmişsin|beter\\s*ol)",
+              "type": "TOXICITY"
+            }
+          ]
+        },
+        "tier2": {
+          "executed": false,
+          "duration_ms": 0,
+          "ai_used": false
+        }
+      },
+      "created_at": "2026-10-15T19:38:12.997Z"
+    },
+    {
+      "id": "log_1792093092992_cod8",
+      "correlation_id": "corr_1792093092991_36b9r",
+      "text": "Bana ne senin derdinden, çok da tın yalan söylüyorsun.",
+      "sanitized_text": "bana ne senin derdinden, çok da tın yalan söylüyorsun.",
+      "verdict": "REJECTED",
+      "risk_score": 85,
+      "violations": [
+        {
+          "category": "TOXICITY",
+          "action": "block",
+          "severity": 3,
+          "score": 0.85,
+          "reason": "Topluluk destek ruhuna aykırı, alaycı ve küçümseyici ifade tespiti (Gilded Kuralı)",
+          "matched_pattern": "(boş\\s*yapma|boş\\s*konuşma|ilgi\\s*meraklısı|prim\\s*yapma|geç\\s*bunları|kimin\\s*umrunda|bana\\s*ne|banane|çok\\s*da\\s*tın|yalan\\s*söylüyorsun|beceriksiz|yapamazsın|zayıfsın|güçsüzsün|ezik|sana\\s*müstahak|iyi\\s*olmuş|hak\\s*etmişsin|beter\\s*ol)"
+        }
+      ],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 1,
+          "flagged": true,
+          "score": 85,
+          "matches": [
+            {
+              "rule_id": "rule_gilded_sanctuary_toxic",
+              "pattern": "(boş\\s*yapma|boş\\s*konuşma|ilgi\\s*meraklısı|prim\\s*yapma|geç\\s*bunları|kimin\\s*umrunda|bana\\s*ne|banane|çok\\s*da\\s*tın|yalan\\s*söylüyorsun|beceriksiz|yapamazsın|zayıfsın|güçsüzsün|ezik|sana\\s*müstahak|iyi\\s*olmuş|hak\\s*etmişsin|beter\\s*ol)",
+              "type": "TOXICITY"
+            }
+          ]
+        },
+        "tier2": {
+          "executed": false,
+          "duration_ms": 0,
+          "ai_used": false
+        }
+      },
+      "created_at": "2026-10-15T19:38:12.992Z"
+    },
+    {
+      "id": "log_1792093092986_apsw",
+      "correlation_id": "corr_1792093092986_2n3vv",
+      "text": "Sana müstahak, hak etmişsin beter ol.",
+      "sanitized_text": "sana müstahak, hak etmişsin beter ol.",
+      "verdict": "REJECTED",
+      "risk_score": 85,
+      "violations": [
+        {
+          "category": "TOXICITY",
+          "action": "block",
+          "severity": 3,
+          "score": 0.85,
+          "reason": "Topluluk destek ruhuna aykırı, alaycı ve küçümseyici ifade tespiti (Gilded Kuralı)",
+          "matched_pattern": "(boş\\s*yapma|boş\\s*konuşma|ilgi\\s*meraklısı|prim\\s*yapma|geç\\s*bunları|kimin\\s*umrunda|bana\\s*ne|banane|çok\\s*da\\s*tın|yalan\\s*söylüyorsun|beceriksiz|yapamazsın|zayıfsın|güçsüzsün|ezik|sana\\s*müstahak|iyi\\s*olmuş|hak\\s*etmişsin|beter\\s*ol)"
+        }
+      ],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": true,
+          "score": 85,
+          "matches": [
+            {
+              "rule_id": "rule_gilded_sanctuary_toxic",
+              "pattern": "(boş\\s*yapma|boş\\s*konuşma|ilgi\\s*meraklısı|prim\\s*yapma|geç\\s*bunları|kimin\\s*umrunda|bana\\s*ne|banane|çok\\s*da\\s*tın|yalan\\s*söylüyorsun|beceriksiz|yapamazsın|zayıfsın|güçsüzsün|ezik|sana\\s*müstahak|iyi\\s*olmuş|hak\\s*etmişsin|beter\\s*ol)",
+              "type": "TOXICITY"
+            }
+          ]
+        },
+        "tier2": {
+          "executed": false,
+          "duration_ms": 0,
+          "ai_used": false
+        }
+      },
+      "created_at": "2026-10-15T19:38:12.986Z"
+    },
+    {
+      "id": "log_1792093092980_h8gw",
+      "correlation_id": "corr_1792093092980_rk75e",
+      "text": "Sen tam bir ilgi meraklısısın, boş yapma prim kasıyorsun.",
+      "sanitized_text": "sen tam bir ilgi meraklısısın, boş yapma prim kasıyorsun.",
+      "verdict": "REJECTED",
+      "risk_score": 85,
+      "violations": [
+        {
+          "category": "TOXICITY",
+          "action": "block",
+          "severity": 3,
+          "score": 0.85,
+          "reason": "Topluluk destek ruhuna aykırı, alaycı ve küçümseyici ifade tespiti (Gilded Kuralı)",
+          "matched_pattern": "(boş\\s*yapma|boş\\s*konuşma|ilgi\\s*meraklısı|prim\\s*yapma|geç\\s*bunları|kimin\\s*umrunda|bana\\s*ne|banane|çok\\s*da\\s*tın|yalan\\s*söylüyorsun|beceriksiz|yapamazsın|zayıfsın|güçsüzsün|ezik|sana\\s*müstahak|iyi\\s*olmuş|hak\\s*etmişsin|beter\\s*ol)"
+        }
+      ],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": true,
+          "score": 85,
+          "matches": [
+            {
+              "rule_id": "rule_gilded_sanctuary_toxic",
+              "pattern": "(boş\\s*yapma|boş\\s*konuşma|ilgi\\s*meraklısı|prim\\s*yapma|geç\\s*bunları|kimin\\s*umrunda|bana\\s*ne|banane|çok\\s*da\\s*tın|yalan\\s*söylüyorsun|beceriksiz|yapamazsın|zayıfsın|güçsüzsün|ezik|sana\\s*müstahak|iyi\\s*olmuş|hak\\s*etmişsin|beter\\s*ol)",
+              "type": "TOXICITY"
+            }
+          ]
+        },
+        "tier2": {
+          "executed": false,
+          "duration_ms": 0,
+          "ai_used": false
+        }
+      },
+      "created_at": "2026-10-15T19:38:12.980Z"
+    },
+    {
+      "id": "log_1792093092971_6tqx",
+      "correlation_id": "corr_1792093092967_6pb7y",
+      "text": "Yanındayız, asla yalnız değilsin, hikayen hepimize ilham oldu.",
+      "sanitized_text": "yanındayız, asla yalnız değilsin, hikayen hepimize ilham oldu.",
+      "verdict": "APPROVED",
+      "risk_score": 0,
+      "violations": [],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": false,
+          "score": 0,
+          "matches": []
+        },
+        "tier2": {
+          "executed": true,
+          "duration_ms": 0,
+          "ai_used": true,
+          "scores": {
+            "toxicity": 0.05,
+            "hate_speech": 0.02,
+            "spam": 0.01,
+            "implicit_threat": 0.01
+          }
+        }
+      },
+      "created_at": "2026-10-15T19:38:12.971Z"
+    },
+    {
+      "id": "log_1792093092961_lo4u",
+      "correlation_id": "corr_1792093092957_i9mqa",
+      "text": "Kintsugi felsefesiyle kırık parçalarımızı altınla onarıyoruz.",
+      "sanitized_text": "kintsugi felsefesiyle kırık parçalarımızı altınla onarıyoruz.",
+      "verdict": "APPROVED",
+      "risk_score": 0,
+      "violations": [],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 1,
+          "flagged": false,
+          "score": 0,
+          "matches": []
+        },
+        "tier2": {
+          "executed": true,
+          "duration_ms": 0,
+          "ai_used": true,
+          "scores": {
+            "toxicity": 0.05,
+            "hate_speech": 0.02,
+            "spam": 0.01,
+            "implicit_threat": 0.01
+          }
+        }
+      },
+      "created_at": "2026-10-15T19:38:12.961Z"
+    },
+    {
+      "id": "log_1792093092951_u2uk",
+      "correlation_id": "corr_1792093092947_r1k6d",
+      "text": "Bu acı da geçecek dostum, altın dikişlerle daha güçlü ayağa kalkacaksın.",
+      "sanitized_text": "bu acı da geçecek dostum, altın dikişlerle daha güçlü ayağa kalkacaksın.",
+      "verdict": "APPROVED",
+      "risk_score": 0,
+      "violations": [],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": false,
+          "score": 0,
+          "matches": []
+        },
+        "tier2": {
+          "executed": true,
+          "duration_ms": 0,
+          "ai_used": true,
+          "scores": {
+            "toxicity": 0.05,
+            "hate_speech": 0.02,
+            "spam": 0.01,
+            "implicit_threat": 0.01
+          }
+        }
+      },
+      "created_at": "2026-10-15T19:38:12.951Z"
+    },
+    {
+      "id": "log_1792093092930_qr5h",
+      "correlation_id": "corr_1792093092904_u9f95",
+      "text": "Yaralarınız, ışığın içeri girdiği yerdir. Kırıldığımız yerlerden daha güçlüyüz.",
+      "sanitized_text": "yaralarınız, ışığın içeri girdiği yerdir. kırıldığımız yerlerden daha güçlüyüz.",
+      "verdict": "APPROVED",
+      "risk_score": 0,
+      "violations": [],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 2,
+          "flagged": false,
+          "score": 0,
+          "matches": []
+        },
+        "tier2": {
+          "executed": true,
+          "duration_ms": 0,
+          "ai_used": true,
+          "scores": {
+            "toxicity": 0.05,
+            "hate_speech": 0.02,
+            "spam": 0.01,
+            "implicit_threat": 0.01
+          }
+        }
+      },
+      "created_at": "2026-10-15T19:38:12.930Z"
+    },
+    {
+      "id": "log_1792093092715_6jkn",
+      "correlation_id": "corr_1792093092715_hddyf",
+      "text": "sen ne salak bir insansın amk defol git",
+      "sanitized_text": "sen ne salak bir insansın amk defol git",
+      "verdict": "REJECTED",
+      "risk_score": 90,
+      "violations": [
+        {
+          "category": "PROFANITY",
+          "action": "block",
+          "severity": 3,
+          "score": 0.9,
+          "reason": "Küfür, hakaret ve argo tespiti (Gilded Güvenlik Kuralı)",
+          "matched_pattern": "(?:^|[^a-zçğıöşü0-9])(?:amk|aq(?=[^a-zçğıöşü0-9]|$)|sg(?=[^a-zçğıöşü0-9]|$)|siktir|o\\s*ç(?=[^a-zçğıöşü0-9]|$)|orospu|piç|yavşak|göt(?!ür|eborg)(?:[^a-zçğıöşü0-9]|$|ü|ün|e|ler|oş|lek|veren|ten|t[eü]n|üm)|salak|aptal|mal(?:lar|s[ıi]n|s[ıi]n[ıi]z|l[ıi]k|l[ıi]ğ[ıi]|ca)?(?=[^a-zçğıöşü0-9]|$)|gerizekalı|amcık|sik(?!let)(?:[^a-zçğıöşü0-9]|$|t[iı]r|ik|erim|eyim|tim|tiler|ti|iyor|er|iş|e|ine|sen|ler)|yarrak|şerefsiz|küfür)"
+        }
+      ],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": true,
+          "score": 90,
+          "matches": [
+            {
+              "rule_id": "rule_profanity_gilded_core",
+              "pattern": "(?:^|[^a-zçğıöşü0-9])(?:amk|aq(?=[^a-zçğıöşü0-9]|$)|sg(?=[^a-zçğıöşü0-9]|$)|siktir|o\\s*ç(?=[^a-zçğıöşü0-9]|$)|orospu|piç|yavşak|göt(?!ür|eborg)(?:[^a-zçğıöşü0-9]|$|ü|ün|e|ler|oş|lek|veren|ten|t[eü]n|üm)|salak|aptal|mal(?:lar|s[ıi]n|s[ıi]n[ıi]z|l[ıi]k|l[ıi]ğ[ıi]|ca)?(?=[^a-zçğıöşü0-9]|$)|gerizekalı|amcık|sik(?!let)(?:[^a-zçğıöşü0-9]|$|t[iı]r|ik|erim|eyim|tim|tiler|ti|iyor|er|iş|e|ine|sen|ler)|yarrak|şerefsiz|küfür)",
+              "type": "PROFANITY"
+            }
+          ]
+        },
+        "tier2": {
+          "executed": false,
+          "duration_ms": 0,
+          "ai_used": false
+        }
+      },
+      "created_at": "2026-10-15T19:38:12.715Z"
+    },
+    {
+      "id": "log_1792093092706_5rdf",
+      "correlation_id": "corr_1792093092678_iqlll",
+      "text": "Bu proje ekibine katkılarından dolayı çok teşekkür ederim.",
+      "sanitized_text": "bu proje ekibine katkılarından dolayı çok teşekkür ederim.",
+      "verdict": "APPROVED",
+      "risk_score": 0,
+      "violations": [],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 3,
+          "flagged": false,
+          "score": 0,
+          "matches": []
+        },
+        "tier2": {
+          "executed": true,
+          "duration_ms": 0,
+          "ai_used": true,
+          "scores": {
+            "toxicity": 0.05,
+            "hate_speech": 0.02,
+            "spam": 0.01,
+            "implicit_threat": 0.01
+          }
+        }
+      },
+      "created_at": "2026-10-15T19:38:12.706Z"
+    },
+    {
+      "id": "log_1792093092529_rm5h",
+      "correlation_id": "corr_test_1792093092528",
+      "text": "Log test metni",
+      "verdict": "APPROVED",
+      "risk_score": 10,
+      "created_at": "2026-10-15T19:38:12.529Z"
+    },
+    {
+      "id": "log_1792093075183_vxva",
+      "correlation_id": "corr_1792093075177_sj83g",
+      "text": "Önbellek test metni #1792093075177",
+      "sanitized_text": "önbellek test metni #it92o9eotsitt",
+      "verdict": "APPROVED",
+      "risk_score": 0,
+      "violations": [],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 1,
+          "flagged": false,
+          "score": 0,
+          "matches": []
+        },
+        "tier2": {
+          "executed": true,
+          "duration_ms": 0,
+          "ai_used": true,
+          "scores": {
+            "toxicity": 0.05,
+            "hate_speech": 0.02,
+            "spam": 0.01,
+            "implicit_threat": 0.01
+          }
+        }
+      },
+      "created_at": "2026-10-15T19:37:55.183Z"
+    },
+    {
+      "id": "log_1792093075174_0zvv",
+      "correlation_id": "corr_1792093075163_f0cnq",
+      "text": "Seni bulduğum yerde gününü göreceksin.",
+      "sanitized_text": "seni bulduğum yerde gününü göreceksin.",
+      "verdict": "REJECTED",
+      "risk_score": 98,
+      "violations": [
+        {
+          "category": "IMPLICIT_THREAT",
+          "score": 0.98,
+          "reason": "Yerel AI Modeli: Şahsa yönelik tehdit veya fiziksel zarar verme niyeti tespiti"
+        }
+      ],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": false,
+          "score": 0,
+          "matches": []
+        },
+        "tier2": {
+          "executed": true,
+          "duration_ms": 1,
+          "ai_used": true,
+          "scores": {
+            "toxicity": 0.8,
+            "hate_speech": 0.02,
+            "spam": 0.01,
+            "implicit_threat": 0.98
+          }
+        }
+      },
+      "created_at": "2026-10-15T19:37:55.174Z"
+    },
+    {
+      "id": "log_1792093075161_9v6i",
+      "correlation_id": "corr_1792093075160_oj5eb",
+      "text": "Sen ne salak ve şerefsiz birisin amk!",
+      "sanitized_text": "sen ne salak ve şerefsiz birisin amk!",
+      "verdict": "REJECTED",
+      "risk_score": 90,
+      "violations": [
+        {
+          "category": "PROFANITY",
+          "action": "block",
+          "severity": 3,
+          "score": 0.9,
+          "reason": "Küfür, hakaret ve argo tespiti (Gilded Güvenlik Kuralı)",
+          "matched_pattern": "(?:^|[^a-zçğıöşü0-9])(?:amk|aq(?=[^a-zçğıöşü0-9]|$)|sg(?=[^a-zçğıöşü0-9]|$)|siktir|o\\s*ç(?=[^a-zçğıöşü0-9]|$)|orospu|piç|yavşak|göt(?!ür|eborg)(?:[^a-zçğıöşü0-9]|$|ü|ün|e|ler|oş|lek|veren|ten|t[eü]n|üm)|salak|aptal|mal(?:lar|s[ıi]n|s[ıi]n[ıi]z|l[ıi]k|l[ıi]ğ[ıi]|ca)?(?=[^a-zçğıöşü0-9]|$)|gerizekalı|amcık|sik(?!let)(?:[^a-zçğıöşü0-9]|$|t[iı]r|ik|erim|eyim|tim|tiler|ti|iyor|er|iş|e|ine|sen|ler)|yarrak|şerefsiz|küfür)"
+        }
+      ],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": true,
+          "score": 90,
+          "matches": [
+            {
+              "rule_id": "rule_profanity_gilded_core",
+              "pattern": "(?:^|[^a-zçğıöşü0-9])(?:amk|aq(?=[^a-zçğıöşü0-9]|$)|sg(?=[^a-zçğıöşü0-9]|$)|siktir|o\\s*ç(?=[^a-zçğıöşü0-9]|$)|orospu|piç|yavşak|göt(?!ür|eborg)(?:[^a-zçğıöşü0-9]|$|ü|ün|e|ler|oş|lek|veren|ten|t[eü]n|üm)|salak|aptal|mal(?:lar|s[ıi]n|s[ıi]n[ıi]z|l[ıi]k|l[ıi]ğ[ıi]|ca)?(?=[^a-zçğıöşü0-9]|$)|gerizekalı|amcık|sik(?!let)(?:[^a-zçğıöşü0-9]|$|t[iı]r|ik|erim|eyim|tim|tiler|ti|iyor|er|iş|e|ine|sen|ler)|yarrak|şerefsiz|küfür)",
+              "type": "PROFANITY"
+            }
+          ]
+        },
+        "tier2": {
+          "executed": false,
+          "duration_ms": 0,
+          "ai_used": false
+        }
+      },
+      "created_at": "2026-10-15T19:37:55.161Z"
+    },
+    {
+      "id": "log_1792093075156_zyuj",
+      "correlation_id": "corr_1792093075092_mvok7",
+      "text": "Bugün hava çok güzel ve ekip olarak harika iş çıkardık.",
+      "sanitized_text": "bugün hava çok güzel ve ekip olarak harika iş çıkardık.",
+      "verdict": "APPROVED",
+      "risk_score": 0,
+      "violations": [],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 2,
+          "flagged": false,
+          "score": 0,
+          "matches": []
+        },
+        "tier2": {
+          "executed": true,
+          "duration_ms": 0,
+          "ai_used": true,
+          "scores": {
+            "toxicity": 0.05,
+            "hate_speech": 0.02,
+            "spam": 0.01,
+            "implicit_threat": 0.01
+          }
+        }
+      },
+      "created_at": "2026-10-15T19:37:55.156Z"
+    },
+    {
+      "id": "log_1792093074628_pw70",
+      "correlation_id": "corr_test_1792093074628",
+      "text": "Log test metni",
+      "verdict": "APPROVED",
+      "risk_score": 10,
+      "created_at": "2026-10-15T19:37:54.628Z"
+    },
+    {
+      "id": "log_1792092904748_x47u",
+      "correlation_id": "corr_1792092904745_r46tq",
+      "text": "Topluluk için paylaşılan temiz bir içerik.",
+      "sanitized_text": "toplulukiçinpaylaşılantemizbiriçerik.",
+      "verdict": "APPROVED",
+      "risk_score": 0,
+      "violations": [],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": false,
+          "score": 0,
+          "matches": []
+        },
+        "tier2": {
+          "executed": true,
+          "duration_ms": 0,
+          "ai_used": true,
+          "scores": {
+            "toxicity": 0.05,
+            "hate_speech": 0.02,
+            "spam": 0.01,
+            "implicit_threat": 0.01
+          }
+        }
+      },
+      "created_at": "2026-10-15T19:35:04.748Z"
+    },
+    {
+      "id": "log_1792092904740_xv53",
+      "correlation_id": "corr_1792092904740_tztgn",
+      "text": "Ne s4l4k bir insansın amk",
+      "sanitized_text": "nesalakbirinsansınamk",
+      "verdict": "REJECTED",
+      "risk_score": 90,
+      "violations": [
+        {
+          "category": "PROFANITY",
+          "action": "block",
+          "severity": 3,
+          "score": 0.9,
+          "reason": "Küfür, hakaret ve argo tespiti (Gilded Güvenlik Kuralı)",
+          "matched_pattern": "(amk|aq|sg|siktir|o\\s*ç|orospu|piç|yavşak|göt|salak|aptal|mal|gerizekalı|amcık|sik|yarrak|şerefsiz|küfür)"
+        }
+      ],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": true,
+          "score": 90,
+          "matches": [
+            {
+              "rule_id": "rule_profanity_gilded_core",
+              "pattern": "(amk|aq|sg|siktir|o\\s*ç|orospu|piç|yavşak|göt|salak|aptal|mal|gerizekalı|amcık|sik|yarrak|şerefsiz|küfür)",
+              "type": "PROFANITY"
+            }
+          ]
+        },
+        "tier2": {
+          "executed": false,
+          "duration_ms": 0,
+          "ai_used": false
+        }
+      },
+      "created_at": "2026-10-15T19:35:04.740Z"
+    },
+    {
+      "id": "log_1792092904737_74lo",
+      "correlation_id": "corr_1792092904736_iy6x4",
+      "text": "Defol git s.i.k.t.i.r",
+      "sanitized_text": "defolgitsiktir",
+      "verdict": "REJECTED",
+      "risk_score": 90,
+      "violations": [
+        {
+          "category": "PROFANITY",
+          "action": "block",
+          "severity": 3,
+          "score": 0.9,
+          "reason": "Küfür, hakaret ve argo tespiti (Gilded Güvenlik Kuralı)",
+          "matched_pattern": "(amk|aq|sg|siktir|o\\s*ç|orospu|piç|yavşak|göt|salak|aptal|mal|gerizekalı|amcık|sik|yarrak|şerefsiz|küfür)"
+        }
+      ],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": true,
+          "score": 90,
+          "matches": [
+            {
+              "rule_id": "rule_profanity_gilded_core",
+              "pattern": "(amk|aq|sg|siktir|o\\s*ç|orospu|piç|yavşak|göt|salak|aptal|mal|gerizekalı|amcık|sik|yarrak|şerefsiz|küfür)",
+              "type": "PROFANITY"
+            }
+          ]
+        },
+        "tier2": {
+          "executed": false,
+          "duration_ms": 0,
+          "ai_used": false
+        }
+      },
+      "created_at": "2026-10-15T19:35:04.737Z"
+    },
+    {
+      "id": "log_1792092904733_mhp6",
+      "correlation_id": "corr_1792092904732_5uq3w",
+      "text": "Sen tam bir oç ve yavşaksın",
+      "sanitized_text": "sentambiroçveyavşaksın",
+      "verdict": "REJECTED",
+      "risk_score": 90,
+      "violations": [
+        {
+          "category": "PROFANITY",
+          "action": "block",
+          "severity": 3,
+          "score": 0.9,
+          "reason": "Küfür, hakaret ve argo tespiti (Gilded Güvenlik Kuralı)",
+          "matched_pattern": "(amk|aq|sg|siktir|o\\s*ç|orospu|piç|yavşak|göt|salak|aptal|mal|gerizekalı|amcık|sik|yarrak|şerefsiz|küfür)"
+        }
+      ],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 1,
+          "flagged": true,
+          "score": 90,
+          "matches": [
+            {
+              "rule_id": "rule_profanity_gilded_core",
+              "pattern": "(amk|aq|sg|siktir|o\\s*ç|orospu|piç|yavşak|göt|salak|aptal|mal|gerizekalı|amcık|sik|yarrak|şerefsiz|küfür)",
+              "type": "PROFANITY"
+            }
+          ]
+        },
+        "tier2": {
+          "executed": false,
+          "duration_ms": 0,
+          "ai_used": false
+        }
+      },
+      "created_at": "2026-10-15T19:35:04.733Z"
+    },
+    {
+      "id": "log_1792092904728_cvw9",
+      "correlation_id": "corr_1792092904727_oymrp",
+      "text": "Seni bulduğum yerde geberteceğim.",
+      "sanitized_text": "senibulduğumyerdegeberteceğim.",
+      "verdict": "REJECTED",
+      "risk_score": 95,
+      "violations": [
+        {
+          "category": "IMPLICIT_THREAT",
+          "action": "block",
+          "severity": 3,
+          "score": 0.95,
+          "reason": "Kendine veya başkasına zarar verme / şiddet tespiti (Gilded Kuralı)",
+          "matched_pattern": "(kendini\\s*öldür|intihar|geber|geberteceğim|öldürürüm)"
+        }
+      ],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": true,
+          "score": 95,
+          "matches": [
+            {
+              "rule_id": "rule_gilded_self_harm_threat",
+              "pattern": "(kendini\\s*öldür|intihar|geber|geberteceğim|öldürürüm)",
+              "type": "IMPLICIT_THREAT"
+            }
+          ]
+        },
+        "tier2": {
+          "executed": false,
+          "duration_ms": 0,
+          "ai_used": false
+        }
+      },
+      "created_at": "2026-10-15T19:35:04.728Z"
+    },
+    {
+      "id": "log_1792092904722_sioz",
+      "correlation_id": "corr_1792092904721_36qxh",
+      "text": "Git kendini öldür, geber.",
+      "sanitized_text": "gitkendiniöldür, geber.",
+      "verdict": "REJECTED",
+      "risk_score": 95,
+      "violations": [
+        {
+          "category": "IMPLICIT_THREAT",
+          "action": "block",
+          "severity": 3,
+          "score": 0.95,
+          "reason": "Kendine veya başkasına zarar verme / şiddet tespiti (Gilded Kuralı)",
+          "matched_pattern": "(kendini\\s*öldür|intihar|geber|geberteceğim|öldürürüm)"
+        }
+      ],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": true,
+          "score": 95,
+          "matches": [
+            {
+              "rule_id": "rule_gilded_self_harm_threat",
+              "pattern": "(kendini\\s*öldür|intihar|geber|geberteceğim|öldürürüm)",
+              "type": "IMPLICIT_THREAT"
+            }
+          ]
+        },
+        "tier2": {
+          "executed": false,
+          "duration_ms": 0,
+          "ai_used": false
+        }
+      },
+      "created_at": "2026-10-15T19:35:04.722Z"
+    },
+    {
+      "id": "log_1792092904713_tyng",
+      "correlation_id": "corr_1792092904713_gk9hi",
+      "text": "Sen ezik ve güçsüz birisin, yapamazsın beceriksiz.",
+      "sanitized_text": "senezikvegüçsüzbirisin, yapamazsınbeceriksiz.",
+      "verdict": "REJECTED",
+      "risk_score": 85,
+      "violations": [
+        {
+          "category": "TOXICITY",
+          "action": "block",
+          "severity": 3,
+          "score": 0.85,
+          "reason": "Topluluk destek ruhuna aykırı, alaycı ve küçümseyici ifade tespiti (Gilded Kuralı)",
+          "matched_pattern": "(boş\\s*yapma|boş\\s*konuşma|ilgi\\s*meraklısı|prim\\s*yapma|geç\\s*bunları|kimin\\s*umrunda|bana\\s*ne|banane|çok\\s*da\\s*tın|yalan\\s*söylüyorsun|beceriksiz|yapamazsın|zayıfsın|güçsüzsün|ezik|sana\\s*müstahak|iyi\\s*olmuş|hak\\s*etmişsin|beter\\s*ol)"
+        }
+      ],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": true,
+          "score": 85,
+          "matches": [
+            {
+              "rule_id": "rule_gilded_sanctuary_toxic",
+              "pattern": "(boş\\s*yapma|boş\\s*konuşma|ilgi\\s*meraklısı|prim\\s*yapma|geç\\s*bunları|kimin\\s*umrunda|bana\\s*ne|banane|çok\\s*da\\s*tın|yalan\\s*söylüyorsun|beceriksiz|yapamazsın|zayıfsın|güçsüzsün|ezik|sana\\s*müstahak|iyi\\s*olmuş|hak\\s*etmişsin|beter\\s*ol)",
+              "type": "TOXICITY"
+            }
+          ]
+        },
+        "tier2": {
+          "executed": false,
+          "duration_ms": 0,
+          "ai_used": false
+        }
+      },
+      "created_at": "2026-10-15T19:35:04.713Z"
+    },
+    {
+      "id": "log_1792092904709_w64b",
+      "correlation_id": "corr_1792092904709_davof",
+      "text": "Bana ne senin derdinden, çok da tın yalan söylüyorsun.",
+      "sanitized_text": "bananeseninderdinden, çokdatınyalansöylüyorsun.",
+      "verdict": "REJECTED",
+      "risk_score": 85,
+      "violations": [
+        {
+          "category": "TOXICITY",
+          "action": "block",
+          "severity": 3,
+          "score": 0.85,
+          "reason": "Topluluk destek ruhuna aykırı, alaycı ve küçümseyici ifade tespiti (Gilded Kuralı)",
+          "matched_pattern": "(boş\\s*yapma|boş\\s*konuşma|ilgi\\s*meraklısı|prim\\s*yapma|geç\\s*bunları|kimin\\s*umrunda|bana\\s*ne|banane|çok\\s*da\\s*tın|yalan\\s*söylüyorsun|beceriksiz|yapamazsın|zayıfsın|güçsüzsün|ezik|sana\\s*müstahak|iyi\\s*olmuş|hak\\s*etmişsin|beter\\s*ol)"
+        }
+      ],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": true,
+          "score": 85,
+          "matches": [
+            {
+              "rule_id": "rule_gilded_sanctuary_toxic",
+              "pattern": "(boş\\s*yapma|boş\\s*konuşma|ilgi\\s*meraklısı|prim\\s*yapma|geç\\s*bunları|kimin\\s*umrunda|bana\\s*ne|banane|çok\\s*da\\s*tın|yalan\\s*söylüyorsun|beceriksiz|yapamazsın|zayıfsın|güçsüzsün|ezik|sana\\s*müstahak|iyi\\s*olmuş|hak\\s*etmişsin|beter\\s*ol)",
+              "type": "TOXICITY"
+            }
+          ]
+        },
+        "tier2": {
+          "executed": false,
+          "duration_ms": 0,
+          "ai_used": false
+        }
+      },
+      "created_at": "2026-10-15T19:35:04.709Z"
+    },
+    {
+      "id": "log_1792092904704_fdl6",
+      "correlation_id": "corr_1792092904704_wbal7",
+      "text": "Sana müstahak, hak etmişsin beter ol.",
+      "sanitized_text": "sanamüstahak, haketmişsinbeterol.",
+      "verdict": "REJECTED",
+      "risk_score": 85,
+      "violations": [
+        {
+          "category": "TOXICITY",
+          "action": "block",
+          "severity": 3,
+          "score": 0.85,
+          "reason": "Topluluk destek ruhuna aykırı, alaycı ve küçümseyici ifade tespiti (Gilded Kuralı)",
+          "matched_pattern": "(boş\\s*yapma|boş\\s*konuşma|ilgi\\s*meraklısı|prim\\s*yapma|geç\\s*bunları|kimin\\s*umrunda|bana\\s*ne|banane|çok\\s*da\\s*tın|yalan\\s*söylüyorsun|beceriksiz|yapamazsın|zayıfsın|güçsüzsün|ezik|sana\\s*müstahak|iyi\\s*olmuş|hak\\s*etmişsin|beter\\s*ol)"
+        }
+      ],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": true,
+          "score": 85,
+          "matches": [
+            {
+              "rule_id": "rule_gilded_sanctuary_toxic",
+              "pattern": "(boş\\s*yapma|boş\\s*konuşma|ilgi\\s*meraklısı|prim\\s*yapma|geç\\s*bunları|kimin\\s*umrunda|bana\\s*ne|banane|çok\\s*da\\s*tın|yalan\\s*söylüyorsun|beceriksiz|yapamazsın|zayıfsın|güçsüzsün|ezik|sana\\s*müstahak|iyi\\s*olmuş|hak\\s*etmişsin|beter\\s*ol)",
+              "type": "TOXICITY"
+            }
+          ]
+        },
+        "tier2": {
+          "executed": false,
+          "duration_ms": 0,
+          "ai_used": false
+        }
+      },
+      "created_at": "2026-10-15T19:35:04.704Z"
+    },
+    {
+      "id": "log_1792092904696_bt5w",
+      "correlation_id": "corr_1792092904696_o4abd",
+      "text": "Sen tam bir ilgi meraklısısın, boş yapma prim kasıyorsun.",
+      "sanitized_text": "sentambirilgimeraklısısın, boşyapmaprimkasıyorsun.",
+      "verdict": "REJECTED",
+      "risk_score": 85,
+      "violations": [
+        {
+          "category": "TOXICITY",
+          "action": "block",
+          "severity": 3,
+          "score": 0.85,
+          "reason": "Topluluk destek ruhuna aykırı, alaycı ve küçümseyici ifade tespiti (Gilded Kuralı)",
+          "matched_pattern": "(boş\\s*yapma|boş\\s*konuşma|ilgi\\s*meraklısı|prim\\s*yapma|geç\\s*bunları|kimin\\s*umrunda|bana\\s*ne|banane|çok\\s*da\\s*tın|yalan\\s*söylüyorsun|beceriksiz|yapamazsın|zayıfsın|güçsüzsün|ezik|sana\\s*müstahak|iyi\\s*olmuş|hak\\s*etmişsin|beter\\s*ol)"
+        }
+      ],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": true,
+          "score": 85,
+          "matches": [
+            {
+              "rule_id": "rule_gilded_sanctuary_toxic",
+              "pattern": "(boş\\s*yapma|boş\\s*konuşma|ilgi\\s*meraklısı|prim\\s*yapma|geç\\s*bunları|kimin\\s*umrunda|bana\\s*ne|banane|çok\\s*da\\s*tın|yalan\\s*söylüyorsun|beceriksiz|yapamazsın|zayıfsın|güçsüzsün|ezik|sana\\s*müstahak|iyi\\s*olmuş|hak\\s*etmişsin|beter\\s*ol)",
+              "type": "TOXICITY"
+            }
+          ]
+        },
+        "tier2": {
+          "executed": false,
+          "duration_ms": 0,
+          "ai_used": false
+        }
+      },
+      "created_at": "2026-10-15T19:35:04.696Z"
+    },
+    {
+      "id": "log_1792092904683_p759",
+      "correlation_id": "corr_1792092904677_kuwx3",
+      "text": "Yanındayız, asla yalnız değilsin, hikayen hepimize ilham oldu.",
+      "sanitized_text": "yanındayız, aslayalnızdeğilsin, hikayenhepimizeilhamoldu.",
+      "verdict": "APPROVED",
+      "risk_score": 0,
+      "violations": [],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": false,
+          "score": 0,
+          "matches": []
+        },
+        "tier2": {
+          "executed": true,
+          "duration_ms": 0,
+          "ai_used": true,
+          "scores": {
+            "toxicity": 0.05,
+            "hate_speech": 0.02,
+            "spam": 0.01,
+            "implicit_threat": 0.01
+          }
+        }
+      },
+      "created_at": "2026-10-15T19:35:04.683Z"
+    },
+    {
+      "id": "log_1792092904669_tb7x",
+      "correlation_id": "corr_1792092904664_8u9hs",
+      "text": "Kintsugi felsefesiyle kırık parçalarımızı altınla onarıyoruz.",
+      "sanitized_text": "kintsugifelsefesiylekırıkparçalarımızıaltınlaonarıyoruz.",
+      "verdict": "APPROVED",
+      "risk_score": 0,
+      "violations": [],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": false,
+          "score": 0,
+          "matches": []
+        },
+        "tier2": {
+          "executed": true,
+          "duration_ms": 0,
+          "ai_used": true,
+          "scores": {
+            "toxicity": 0.05,
+            "hate_speech": 0.02,
+            "spam": 0.01,
+            "implicit_threat": 0.01
+          }
+        }
+      },
+      "created_at": "2026-10-15T19:35:04.669Z"
+    },
+    {
+      "id": "log_1792092904657_7lh4",
+      "correlation_id": "corr_1792092904652_rcwnk",
+      "text": "Bu acı da geçecek dostum, altın dikişlerle daha güçlü ayağa kalkacaksın.",
+      "sanitized_text": "buacıdageçecekdostum, altındikişlerledahagüçlüayağakalkacaksın.",
+      "verdict": "APPROVED",
+      "risk_score": 0,
+      "violations": [],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": false,
+          "score": 0,
+          "matches": []
+        },
+        "tier2": {
+          "executed": true,
+          "duration_ms": 0,
+          "ai_used": true,
+          "scores": {
+            "toxicity": 0.05,
+            "hate_speech": 0.02,
+            "spam": 0.01,
+            "implicit_threat": 0.01
+          }
+        }
+      },
+      "created_at": "2026-10-15T19:35:04.657Z"
+    },
+    {
+      "id": "log_1792092904631_pztb",
+      "correlation_id": "corr_1792092904605_qc4yt",
+      "text": "Yaralarınız, ışığın içeri girdiği yerdir. Kırıldığımız yerlerden daha güçlüyüz.",
+      "sanitized_text": "yaralarınız, ışığıniçerigirdiğiyerdirkırıldığımızyerlerdendahagüçlüyüz.",
+      "verdict": "APPROVED",
+      "risk_score": 0,
+      "violations": [],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 1,
+          "flagged": false,
+          "score": 0,
+          "matches": []
+        },
+        "tier2": {
+          "executed": true,
+          "duration_ms": 0,
+          "ai_used": true,
+          "scores": {
+            "toxicity": 0.05,
+            "hate_speech": 0.02,
+            "spam": 0.01,
+            "implicit_threat": 0.01
+          }
+        }
+      },
+      "created_at": "2026-10-15T19:35:04.631Z"
+    },
+    {
+      "id": "log_1792092901945_twzp",
+      "correlation_id": "corr_1792092901940_23vkr",
+      "text": "Önbellek test metni #1792092901940",
+      "sanitized_text": "önbellektestmetni #it92o929oi9ao",
+      "verdict": "APPROVED",
+      "risk_score": 0,
+      "violations": [],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 1,
+          "flagged": false,
+          "score": 0,
+          "matches": []
+        },
+        "tier2": {
+          "executed": true,
+          "duration_ms": 0,
+          "ai_used": true,
+          "scores": {
+            "toxicity": 0.05,
+            "hate_speech": 0.02,
+            "spam": 0.01,
+            "implicit_threat": 0.01
+          }
+        }
+      },
+      "created_at": "2026-10-15T19:35:01.945Z"
+    },
+    {
+      "id": "log_1792092901939_b1r7",
+      "correlation_id": "corr_1792092901933_fy6ln",
+      "text": "Seni bulduğum yerde gününü göreceksin.",
+      "sanitized_text": "senibulduğumyerdegününügöreceksin.",
+      "verdict": "APPROVED",
+      "risk_score": 0,
+      "violations": [],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 0,
+          "flagged": false,
+          "score": 0,
+          "matches": []
+        },
+        "tier2": {
+          "executed": true,
+          "duration_ms": 0,
+          "ai_used": true,
+          "scores": {
+            "toxicity": 0.05,
+            "hate_speech": 0.02,
+            "spam": 0.01,
+            "implicit_threat": 0.01
+          }
+        }
+      },
+      "created_at": "2026-10-15T19:35:01.939Z"
+    },
+    {
+      "id": "log_1792092901931_ix2j",
+      "correlation_id": "corr_1792092901930_8eerz",
+      "text": "Sen ne salak ve şerefsiz birisin amk!",
+      "sanitized_text": "sennesalakveşerefsizbirisinamk!",
+      "verdict": "REJECTED",
+      "risk_score": 90,
+      "violations": [
+        {
+          "category": "PROFANITY",
+          "action": "block",
+          "severity": 3,
+          "score": 0.9,
+          "reason": "Küfür, hakaret ve argo tespiti (Gilded Güvenlik Kuralı)",
+          "matched_pattern": "(amk|aq|sg|siktir|o\\s*ç|orospu|piç|yavşak|göt|salak|aptal|mal|gerizekalı|amcık|sik|yarrak|şerefsiz|küfür)"
+        }
+      ],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 1,
+          "flagged": true,
+          "score": 90,
+          "matches": [
+            {
+              "rule_id": "rule_profanity_gilded_core",
+              "pattern": "(amk|aq|sg|siktir|o\\s*ç|orospu|piç|yavşak|göt|salak|aptal|mal|gerizekalı|amcık|sik|yarrak|şerefsiz|küfür)",
+              "type": "PROFANITY"
+            }
+          ]
+        },
+        "tier2": {
+          "executed": false,
+          "duration_ms": 0,
+          "ai_used": false
+        }
+      },
+      "created_at": "2026-10-15T19:35:01.931Z"
+    },
+    {
+      "id": "log_1792092901927_2cdw",
+      "correlation_id": "corr_1792092901855_wxo4p",
+      "text": "Bugün hava çok güzel ve ekip olarak harika iş çıkardık.",
+      "sanitized_text": "bugünhavaçokgüzelveekipolarakharikaişçıkardık.",
+      "verdict": "APPROVED",
+      "risk_score": 0,
+      "violations": [],
+      "breakdown": {
+        "tier1": {
+          "executed": true,
+          "duration_ms": 3,
+          "flagged": false,
+          "score": 0,
+          "matches": []
+        },
+        "tier2": {
+          "executed": true,
+          "duration_ms": 0,
+          "ai_used": true,
+          "scores": {
+            "toxicity": 0.05,
+            "hate_speech": 0.02,
+            "spam": 0.01,
+            "implicit_threat": 0.01
+          }
+        }
+      },
+      "created_at": "2026-10-15T19:35:01.927Z"
+    },
+    {
+      "id": "log_1792092900793_4p2c",
+      "correlation_id": "corr_test_1792092900793",
+      "text": "Log test metni",
+      "verdict": "APPROVED",
+      "risk_score": 10,
+      "created_at": "2026-10-15T19:35:00.793Z"
+    },
     {
       "id": "log_1787080290109_j5ql",
       "correlation_id": "corr_1787080290105_t56k0",
