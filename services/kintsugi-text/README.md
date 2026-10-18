@@ -21,6 +21,7 @@
 - [Overview](#-overview)
 - [Key Features](#-key-features)
 - [System Architecture](#-system-architecture)
+- [Dataset & ML Training Pipeline](#-dataset--ml-training-pipeline)
 - [Validated Benchmarks & Metrics](#-validated-benchmarks--metrics)
 - [Playground UI & Custom Swagger](#-playground-ui--custom-swagger)
 - [Tech Stack](#-tech-stack)
@@ -44,7 +45,7 @@ Engineered as a monorepo microservice architecture, KintsugiText bridges ultra-f
 
 - 🏎️ **Hybrid Two-Tier Moderation Engine:**
   - **Tier-1 (Rule Engine):** Executes high-speed regex matching, diacritic normalization, and leetspeak reduction in **< 4.0ms**.
-  - **Tier-2 (Python ML Engine):** Asynchronous Scikit-Learn TF-IDF + Multi-Output Logistic Regression analyzing implicit threats, hate speech, and spam in **< 3.66ms**.
+  - **Tier-2 (Python ML Engine):** Asynchronous Scikit-Learn TF-IDF + Multi-Output Logistic Regression trained on a **77,000+ sample Hugging Face Turkish dataset**; detecting implicit threats, hate speech, toxicity, and spam in **< 3.66ms**.
 - 🔤 **Turkish Morphological & Leetspeak Normalizer:**
   - Normalizes complex character substitutions (`s4l4m` $\rightarrow$ `salam`), zero-width Unicode evasions (`s\u200Be\u200Blam`), diacritics, and agglutinative suffixes.
 - 🔁 **HITL & Self-Healing Auto-Retraining:**
@@ -101,6 +102,32 @@ flowchart TD
 
 ---
 
+## 🧠 Dataset & ML Training Pipeline
+
+KintsugiText's Tier-2 Machine Learning engine is trained on a large-scale corpus combining a **77,000+ sample Turkish Toxic Language Dataset** sourced from Hugging Face with curated domain-specific edge cases and guardrails.
+
+### 1. Data Sources & Composition
+- **Hugging Face Turkish Toxic Dataset (`77,000+ rows`):**
+  - Provides broad coverage of real-world Turkish conversational text, social media interactions, insults, profanity, and targeted slurs.
+  - Features multi-class classification labels including general toxicity (`is_toxic`), racist/sexist hate speech (`target`), and offensive expressions.
+- **Curated Domain & Guardrail Corpus (`DOMAIN_SAMPLES`):**
+  - Injected into the training pipeline to eliminate **Scunthorpe false positive traps** (e.g. benign words with substring collisions such as *"Malatya kayısısı"*, *"Mustafa Kemal Atatürk"*, *"bisiklet sürdük"*, *"maliyet muhasebesi"*, *"bu raporda bazı belgeler eksik"*).
+  - Explicitly weights and balances real implicit threat patterns (*"seninle sonra görüşeceğiz"*, *"evinin önüne geleceğim"*, *"geberteceğim"*) and illegal gambling/spam triggers (*"deneme bonusu"*, *"k4zin0"*, *"anında 1000 TL"*).
+
+### 2. Category Mapping
+| Moderation Category | Label Origin / Mapping | Detection Method |
+| :--- | :--- | :--- |
+| **`Toxicity (Tox)`** | `is_toxic` (HF Dataset) + Domain Profanity | Sublinear TF-IDF + Logistic Regression ($C=2.5$) |
+| **`Hate Speech (Hate)`** | `target in ['RACIST', 'SEXIST']` (HF Dataset) | Multi-Class Binary Classification ($C=2.5$) |
+| **`Spam & Betting`** | Domain Corpus + Regularized Heuristics | High-Precision Logistic Classifier ($C=3.0$) |
+| **`Implicit Threat`** | Domain Implicit Violence & Stalking Patterns | Contextual Semantic Classifier ($C=3.0$) |
+
+### 3. Feature Extraction & Serialization
+- **TF-IDF N-Gram Vectorizer:** 1-to-3 character and word n-grams, sublinear term-frequency scaling, capped at **30,000 features** for optimal memory-latency trade-off.
+- **Fast Production Inference:** All four binary classifiers and the vectorizer are serialized to compressed `joblib` artifacts (`apps/ai-service/models/`), enabling instant loading without cold-start overhead and maintaining sub-4ms latency.
+
+---
+
 ## 📊 Validated Benchmarks & Metrics
 
 > **Benchmark Environment:** Apple M2, 16 GB RAM | Node.js 22.x | Python 3.12+ | Workload: 10,000 Requests @ Concurrency 100
@@ -151,6 +178,7 @@ The interactive React + Vite + Tailwind frontend sandbox includes:
 | | **Prisma ORM** | Type-safe database client & migrations |
 | **AI Microservice** | **Python 3.11+ / FastAPI** | Asynchronous ML inference microservice |
 | | **Scikit-Learn** | TF-IDF vectorization & Logistic Regression classifiers |
+| | **Hugging Face** | 77K+ Turkish Toxic Language Dataset for supervised ML |
 | **Database & Cache** | **Redis 7 (Cluster HA)** | Sub-millisecond semantic caching (`{cache}:mod:<hash>`) |
 | | **PostgreSQL 16 / SQLite** | Partitioned production database & local dev datastore |
 | **Playground UI** | **React / Vite / Tailwind** | Modern dark-mode sandbox application |
